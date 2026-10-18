@@ -73,6 +73,9 @@ def find(url: str) -> Extractor | None:
     all_ex = load_all()
     specific = [e for e in all_ex if e.matches_url(url) and "*" not in e.matches]
     if specific:
-        return specific[0]
+        # most specific pattern wins (r/*/comments/* beats r/*)
+        def score(e: Extractor) -> int:
+            return max(len(m) for m in e.matches if fnmatch.fnmatch(url, m))
+        return max(specific, key=score)
     generic = [e for e in all_ex if "*" in e.matches]
     return generic[0] if generic else None

@@ -23,7 +23,7 @@ def version() -> dict | None:
         return None
 
 
-def launch() -> None:
+def launch() -> subprocess.Popen:
     c = config.load()["chrome"]
     if not c["path"]:
         raise RuntimeError("No Chrome/Chromium/Brave/Edge found; set [chrome].path in ochi.toml "
@@ -34,8 +34,8 @@ def launch() -> None:
     profile = Path(c["profile"]).expanduser()
     cmd = [str(exe), f"--remote-debugging-port={c['port']}", f"--user-data-dir={profile}", *c["args"]]
     # detached: survives ochi restarts, logs go nowhere
-    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                     stdin=subprocess.DEVNULL, start_new_session=True)
+    return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                            stdin=subprocess.DEVNULL, start_new_session=True)
 
 
 async def ensure(timeout_s: float = 15) -> dict:
@@ -44,11 +44,15 @@ async def ensure(timeout_s: float = 15) -> dict:
         return info
     if not config.load()["chrome"]["autostart"]:
         raise RuntimeError(f"Browser not running on {cdp_url()} and autostart is off.")
-    launch()
+    proc = launch()
     loop = asyncio.get_running_loop()
     deadline = loop.time() + timeout_s
     while loop.time() < deadline:
         await asyncio.sleep(0.5)
         if info := version():
             return info
+        if (code := proc.poll()) is not None:
+            hint = ("is this profile already open without the debugging port?" if code == 0 else
+                    "try running it by hand with the same flags to see why")
+            raise RuntimeError(f"The browser exited with code {code} before {cdp_url()} answered ({hint}).")
     raise RuntimeError(f"Started the browser but {cdp_url()} did not answer within {timeout_s}s.")

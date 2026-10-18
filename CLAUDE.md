@@ -19,6 +19,10 @@
 - `urlguard.check()` gates every URL that fetch/show/snapshot/ochi-try open (http(s) only, no private hosts
   unless `[urls]` allows). `browser.connect()` keeps one Playwright driver + CDP connection per event loop;
   never `async with async_playwright()` per call. Discogs API errors become readable `RuntimeError`s, 429 retried.
+- ochi is the tool layer only: tools fetch, filter and return compact data. No taste profiles, recommendations,
+  workflow prompts or personal data in ochi; judging and personalizing is the model's job (it has its own memory).
+  Prefer the site's own filters and big pages over the API; use the API to enrich short lists.
+- Extractor-side `ochi_*` URL params (see README) shape results inside the page and are stripped before requests.
 - Do not add captcha solving, stealth evasion, or paywall bypass.
 - Tests: `uv run pytest` (no network; `browser`-marked ones run extractors in headless Chromium against
   `tests/fixtures/`), lint: `uv run ruff check .`. CI: `.github/workflows/ci.yml`, Linux/macOS/Windows.

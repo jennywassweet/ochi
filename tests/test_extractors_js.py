@@ -105,16 +105,53 @@ def test_reddit_sub(site):
     assert any("/r/vinyl/new.json?limit=40&raw_json=1&t=week" in u for u in site.requests)
 
 
-def test_discogs_seller_table(site):
+SELLER = "https://www.discogs.com/seller/shopper/profile?format=Vinyl&ochi_pages=1"
+
+
+@pytest.fixture
+def seller(site):
     site.routes.append(("discogs.com/seller/", HTML, (FIXTURES / "discogs-seller.html").read_text(encoding="utf-8")))
-    r = run(site, "https://www.discogs.com/seller/shopper/profile?format=Vinyl&ochi_max=20&ochi_pages=1")
+    return lambda params="": run(site, SELLER + params)
+
+
+def test_discogs_seller_table(seller):
+    r = seller("&ochi_max=20")
     assert r["total_on_site"] == "1,204"
-    assert r["fetched"] == 3 and r["shown"] == 2 and r["max_price"] == 20  # €1,234.50 is over the limit
+    assert r["fetched"] == 4 and r["shown"] == 3 and r["filters"] == {"max_price": 20}  # €1,234.50 is over
     assert r["common"] == {"seller": "shopper", "rating": "99.6%", "from": "Netherlands", "shipping": "+€14.00"}
     assert r["items"][0] == {"id": "101", "title": "Artist A - First LP (LP, Album)", "label": "Lab One · L-1",
-                             "media": "Very Good Plus (VG+)", "sleeve": "Very Good (VG)", "price": "€12.50"}
-    assert r["items"][1]["price"] == "8,99 €"
+                             "media": "Very Good Plus (VG+)", "sleeve": "Very Good (VG)", "price": "€12.50",
+                             "total": 26.5}
+    assert r["items"][1]["price"] == "8,99 €" and r["items"][1]["total"] == 22.99
     assert "ochi_" not in r["url"] and "limit=250" in r["url"]
+
+
+def ids(r):
+    return [i["id"] for i in r["items"]]
+
+
+@pytest.mark.parametrize(("params", "expected"), [
+    ("", ["101", "102", "103", "104"]),
+    ("&ochi_min_media=NM", ["102", "103"]),            # M and NM pass, VG+ and G+ don't
+    ("&ochi_min_media=vg%2B", ["101", "102", "103"]),  # case-insensitive, "+" URL-encoded
+    ("&ochi_min_sleeve=VG", ["101", "102", "103"]),    # a Generic sleeve has no grade
+    ("&ochi_max_total=25", ["102", "104"]),            # 8.99+14, 3+14; 12.50+14 is 26.50
+    ("&ochi_sort=price", ["104", "102", "101", "103"]),
+    ("&ochi_sort=total&ochi_min_media=VG", ["102", "101", "103"]),
+])
+def test_discogs_filters(seller, params, expected):
+    assert ids(seller(params)) == expected
+
+
+def test_discogs_fields(seller):
+    r = seller("&ochi_fields=price,media&ochi_max=10")
+    assert r["items"] == [{"id": "102", "media": "Mint (M)", "price": "8,99 €"},
+                          {"id": "104", "media": "Good Plus (G+)", "price": "€3.00"}]
+
+
+@pytest.mark.parametrize("params", ["&ochi_min_media=excellent", "&ochi_sort=rating"])
+def test_discogs_bad_filter_is_reported(seller, params):
+    assert "error" in seller(params)
 
 
 def test_discogs_shop_list_graphql(site):
@@ -142,3 +179,41 @@ def test_discogs_shop_list_graphql(site):
     first = next(i for i in r["items"] if i["id"] == str(cheap[0]["id"]))
     assert re.fullmatch(r"€\d+\.\d\d", first["price"])
     assert " - " in first["title"]
+
+
+def test_discogs_shop_list_filters(site):
+    data = json.loads((FIXTURES / "discogs-shop-list.graphql.json").read_text(encoding="utf-8"))
+    nodes = [e["node"] for e in data["data"]["marketplaceSearch"]["edges"]]
+    page_html = """<html><body><script>
+        fetch('/graphql?operationName=MarketplaceSearch&variables=' + encodeURIComponent('{"first":25}'));
+        </script></body></html>"""
+    site.routes += [("/graphql", JSON, json.dumps(data)), ("discogs.com/shop/", HTML, page_html)]
+    r = run(site, "https://www.discogs.com/shop/list?ochi_pages=1&ochi_min_media=NM&ochi_sort=total")
+
+    good = [n for n in nodes if n["mediaCondition"] in ("MINT", "NEAR_MINT")]
+    assert r["shown"] == len(good) > 0
+    totals = [i.get("total", 0) for i in r["items"]]
+    assert totals == sorted(totals)
+    for item in r["items"]:
+        assert item.get("media", r["common"].get("media")) in ("Mint (M)", "Near Mint (NM or M-)")
+
+
+def test_discogs_release_sellers_in_buyer_currency(site):
+    """Real page (anonymized): sellers in EUR and USD; totals use Discogs' conversion to the buyer's currency."""
+    html = (FIXTURES / "discogs-release-sellers.html").read_text(encoding="utf-8")
+    site.routes.append(("discogs.com/sell/release/", HTML, html))
+    r = run(site, "https://www.discogs.com/sell/release/13844130?ochi_pages=1&ochi_sort=total")
+    assert r["fetched"] == 10 and r["total_on_site"] == "10"
+    items = r["items"]
+    usd = next(i for i in items if i["id"] == "4410581886")
+    assert (usd["price"], usd["shipping"], usd["total"]) == ("$30.00", "+$15.00", 40.05)
+    assert usd["from"] == "United Arab Emirates" and usd["free_over"] == "$1,000.00"
+    known = [i["total"] for i in items if "total" in i]
+    assert known == sorted(known) and len(known) == 8
+    assert [i["shipping"] for i in items[-2:]] == ["?", "?"]  # unknown shipping sorts last
+    assert all(i.get("from") for i in items)
+
+    cheap = run(site, "https://www.discogs.com/sell/release/13844130?ochi_pages=1&ochi_max=41")
+    # $44.99 is about €40.04 for the buyer, so it passes a 41 (EUR) limit; €45.00 doesn't
+    assert {"4413292671", "4410581886"} <= {i["id"] for i in cheap["items"]}
+    assert "3248375315" not in {i["id"] for i in cheap["items"]}

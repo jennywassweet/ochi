@@ -10,5 +10,8 @@ snapshot (user id, username, cart, wantlist) before committing.
   (25 listings, prices in EUR as seen by the buyer), with the `viewer` block and per-user flags removed.
   `extractors/discogs-market.js` reads listings from this response, not from the HTML.
 - `discogs-seller.html`: synthetic, the old marketplace table (seller shop) reduced to the classes the
-  extractor reads, with prices in mixed formats (`€12.50`, `8,99 €`, `€1,234.50`).
+  extractor reads, with prices in mixed formats (`€12.50`, `8,99 €`, `€1,234.50`, `€3.00`) and one Generic sleeve.
 - `reddit-thread.json`, `reddit-sub.json`: synthetic, minimal shapes of Reddit's `.json` views.
+- `discogs-release-sellers.html`: `https://www.discogs.com/sell/release/13844130`, 2026-10-18; only the listings
+  table kept, scripts and images removed, seller names replaced by `seller1…`. Sellers in EUR and USD, two
+  without shipping to the buyer, one with a free-shipping threshold.

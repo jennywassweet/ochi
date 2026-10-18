@@ -98,7 +98,23 @@ pattern wins, and an extractor matching `*` is the fallback.
 
 ## Extractor-specific URL params
 
-- `discogs-market`: `ochi_max=20` keeps items up to that price; `ochi_pages=10` caps pagination (250 per page).
+`discogs-market` (seller shops, `/shop/list`, sellers of a release) takes extra `ochi_*` params. They are applied
+by ochi after reading the pages (not sent to Discogs), so they combine with any filter the site itself offers:
+
+| param | effect |
+|---|---|
+| `ochi_max=20` | price up to 20 |
+| `ochi_max_total=25` | price + shipping up to 25 (items with unknown shipping are judged by price) |
+| `ochi_min_media=VG+`, `ochi_min_sleeve=VG` | condition at least this (`M`, `NM`/`M-`, `VG+`, `VG`, `G+`, `G`, `F`, `P`); a sleeve that is Generic / No Cover / Not Graded doesn't pass `ochi_min_sleeve` |
+| `ochi_sort=price` / `total` | cheapest first, by price or by price + shipping |
+| `ochi_fields=title,price,total` | keep only these fields per item (plus `id`), to save tokens |
+| `ochi_pages=10` | at most this many pages (250 items each) |
+
+Prices are shown as the seller lists them; `ochi_max`, `ochi_max_total`, `ochi_sort` and each item's `total`
+(price + shipping to you) use Discogs' conversion to **your** currency when the seller uses another one.
+`shipping: "?"` means Discogs doesn't show shipping to your country for that item (check the seller's terms);
+`free_over` is the seller's free-shipping threshold, when they have one. Example:
+`https://www.discogs.com/seller/SELLER/profile?style=Psychedelic+Rock&format=Vinyl&ochi_min_media=VG%2B&ochi_sort=total`
 
 ## Development
 

@@ -101,3 +101,63 @@ def test_listing(fake_get):
     }
     r = discogs_api.listing(9)
     assert (r["price"], r["shipping"], r["currency"], r["seller"], r["rating"]) == (20.0, 5.0, "EUR", "s", "99.9")
+
+
+def http_error(code, body=b"{}", headers=None):
+    import email.message
+    msg = email.message.Message()
+    for k, v in (headers or {}).items():
+        msg[k] = v
+    return discogs_api.urllib.error.HTTPError("https://api.discogs.com/x", code, "reason", msg, io.BytesIO(body))
+
+
+def test_retries_on_rate_limit(monkeypatch):
+    calls, sleeps = [], []
+
+    def urlopen(req, timeout):
+        calls.append(1)
+        if len(calls) < 3:
+            raise http_error(429, headers={"Retry-After": "1"} if len(calls) == 1 else None)
+        return io.BytesIO(b'{"ok": 1}')
+
+    monkeypatch.setattr(discogs_api.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(discogs_api.time, "sleep", sleeps.append)
+    assert discogs_api._get("/x") == {"ok": 1}
+    assert sleeps == [1.0, 4.0]  # Retry-After, then backoff for the 2nd attempt
+
+
+def test_gives_up_after_retries(monkeypatch):
+    def urlopen(req, timeout):
+        raise http_error(429)
+
+    monkeypatch.setattr(discogs_api.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(discogs_api.time, "sleep", lambda s: None)
+    with pytest.raises(RuntimeError, match="rate limit still hit"):
+        discogs_api._get("/x")
+
+
+@pytest.mark.parametrize(("code", "token", "msg"), [
+    (401, None, "needs a token"),
+    (401, "bad", "DISCOGS_TOKEN looks wrong"),
+    (404, None, "not found"),
+    (500, None, "HTTP 500 Server broke"),
+])
+def test_errors_are_explained(monkeypatch, code, token, msg):
+    if token:
+        monkeypatch.setenv("DISCOGS_TOKEN", token)
+
+    def urlopen(req, timeout):
+        raise http_error(code, body=b'{"message": "Server broke"}')
+
+    monkeypatch.setattr(discogs_api.urllib.request, "urlopen", urlopen)
+    with pytest.raises(RuntimeError, match=msg):
+        discogs_api._get("/releases/1")
+
+
+def test_network_errors_are_explained(monkeypatch):
+    def urlopen(req, timeout):
+        raise discogs_api.urllib.error.URLError("nodename nor servname provided")
+
+    monkeypatch.setattr(discogs_api.urllib.request, "urlopen", urlopen)
+    with pytest.raises(RuntimeError, match="Can't reach the Discogs API"):
+        discogs_api._get("/x")

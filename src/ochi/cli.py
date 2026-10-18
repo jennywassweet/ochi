@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import shutil
 import sys
-from . import browser, config, extractors
+from . import browser, config, extractors, urlguard
 
 
 def main() -> None:
@@ -15,8 +15,12 @@ def main() -> None:
     if not args or (args[0] == "--snapshot" and len(args) < 2):
         print(__doc__)
         sys.exit(1)
+    try:
+        urlguard.check(args[-1])
+    except ValueError as e:
+        sys.exit(str(e))
     if args[0] == "--snapshot":
-        path = asyncio.run(browser.snapshot(args[1], config.home() / "snapshots"))
+        path = asyncio.run(_once(browser.snapshot(args[1], config.home() / "snapshots")))
         print(f"saved {path}")
         return
     url = args[0]
@@ -24,8 +28,16 @@ def main() -> None:
     if ex is None:
         sys.exit("No extractor available (extractors/ folder empty?).")
     print(f"[extractor: {ex.name}]")
-    result = asyncio.run(browser.run(url, ex))
+    result = asyncio.run(_once(browser.run(url, ex)))
     print(browser.to_text(result, 200000))
+
+
+async def _once(coro):
+    """Run one browser call, then let go of the connection before the event loop closes."""
+    try:
+        return await coro
+    finally:
+        await browser.disconnect()
 
 
 def init() -> None:

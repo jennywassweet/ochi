@@ -7,7 +7,7 @@ import sys
 
 from mcp.server.fastmcp import FastMCP
 
-from . import browser, chrome, config, discogs_api, extractors
+from . import browser, chrome, config, discogs_api, extractors, urlguard
 
 mcp = FastMCP("ochi")
 
@@ -29,6 +29,7 @@ async def fetch(url: str, max_chars: int = 40000) -> str:
     Use for sites that block normal fetching (Discogs marketplace, Reddit, news).
     Discogs marketplace URLs accept ochi_max=<price> to keep only cheaper items.
     """
+    urlguard.check(url)
     ex = extractors.find(url)
     if ex is None:
         return "No extractor available (extractors/ folder empty?)."
@@ -48,6 +49,7 @@ async def look(tab: int | None = None, max_chars: int = 40000) -> str:
 async def show(url: str) -> str:
     """Open a page for the user in a new visible tab of the ochi browser and leave it open
     ("look what I found"). Use sparingly: only when they'd want to see it themselves."""
+    urlguard.check(url)
     title = await browser.show(url)
     return f"Opened: {title} — {url}"
 
@@ -82,6 +84,7 @@ def list_extractors() -> str:
 @mcp.tool()
 async def snapshot(url: str) -> str:
     """Save the rendered HTML of a page into snapshots/ (to write or debug an extractor)."""
+    urlguard.check(url)
     path = await browser.snapshot(url, config.home() / "snapshots")
     return f"Saved {path} ({path.stat().st_size} bytes)"
 

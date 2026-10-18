@@ -67,3 +67,15 @@ async def test_errors_come_back_as_tool_errors(monkeypatch):
     monkeypatch.setattr(discogs_api, "release", boom)
     err, text = await call("discogs_release", release_id=1)
     assert err and "autostart is off" in text
+
+
+async def test_fetch_and_show_refuse_local_urls(monkeypatch):
+    async def must_not_run(*a):
+        raise AssertionError("browser was used")
+
+    monkeypatch.setattr(browser, "run", must_not_run)
+    monkeypatch.setattr(browser, "show", must_not_run)
+    err, text = await call("fetch", url="file:///etc/passwd")
+    assert err and "only opens http" in text
+    err, text = await call("show", url="http://192.168.1.1/")
+    assert err and "local/private" in text

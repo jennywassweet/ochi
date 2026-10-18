@@ -89,6 +89,10 @@ def load() -> dict:
         chrome["port"] = int(v)
     if not chrome.get("path"):
         chrome["path"] = find_chrome()
+    urls = cfg.setdefault("urls", {})
+    urls.setdefault("allow", [])
+    urls.setdefault("deny", [])
+    urls.setdefault("allow_private", False)
     return cfg
 
 

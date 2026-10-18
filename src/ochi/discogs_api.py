@@ -3,21 +3,63 @@ from __future__ import annotations
 
 import json
 import os
+import time
+import urllib.error
 import urllib.parse
 import urllib.request
 
 API = "https://api.discogs.com"
-UA = "ochi/0.1 +https://github.com/jennywassweet/ochi"
+UA = "ochi/0.2 +https://github.com/jennywassweet/ochi"
+
+
+RETRIES = 3  # on 429 (rate limit: 60 requests/min with a token, 25 without)
+
+
+def _token() -> str | None:
+    return os.environ.get("DISCOGS_TOKEN") or os.environ.get("DISCOGS_PERSONAL_ACCESS_TOKEN")
 
 
 def _get(path: str, **params) -> dict:
     params = {k: v for k, v in params.items() if v not in (None, "")}
     url = f"{API}{path}" + (f"?{urllib.parse.urlencode(params)}" if params else "")
     headers = {"User-Agent": UA}
-    if token := os.environ.get("DISCOGS_TOKEN") or os.environ.get("DISCOGS_PERSONAL_ACCESS_TOKEN"):
+    if token := _token():
         headers["Authorization"] = f"Discogs token={token}"
-    with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=20) as r:
-        return json.load(r)
+    for attempt in range(RETRIES + 1):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=headers), timeout=20) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and attempt < RETRIES:
+                time.sleep(_retry_after(e, attempt))
+                continue
+            raise RuntimeError(_explain(e, path)) from None
+        except urllib.error.URLError as e:
+            raise RuntimeError(f"Can't reach the Discogs API: {e.reason}") from None
+    raise AssertionError("unreachable")
+
+
+def _retry_after(e: urllib.error.HTTPError, attempt: int) -> float:
+    try:
+        return min(float(e.headers.get("Retry-After", "")), 60.0)
+    except ValueError:
+        return 2.0 * 2 ** attempt  # 2, 4, 8 s
+
+
+def _explain(e: urllib.error.HTTPError, path: str) -> str:
+    try:
+        message = json.load(e).get("message", "")
+    except Exception:  # noqa: BLE001
+        message = ""
+    if e.code == 401:
+        hint = ("DISCOGS_TOKEN looks wrong" if _token() else
+                "this needs a token: put DISCOGS_TOKEN into .env (see README)")
+        return f"Discogs API {path}: not authorized, {hint}."
+    if e.code == 404:
+        return f"Discogs API {path}: not found (wrong id, or a listing that was sold or removed)."
+    if e.code == 429:
+        return f"Discogs API {path}: rate limit still hit after {RETRIES} retries; wait a minute."
+    return f"Discogs API {path}: HTTP {e.code} {message or e.reason}".rstrip()
 
 
 def search(q: str, type: str = "release", format: str = "", per_page: int = 15) -> list[dict]:

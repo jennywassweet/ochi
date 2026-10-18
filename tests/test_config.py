@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 from ochi import chrome, config
 
@@ -60,7 +61,7 @@ def test_load_dotenv(tmp_path, monkeypatch):
     (tmp_path / ".env").write_text(
         "# comment\n\nOCHI_T_A=1\nOCHI_T_B = 'quoted value'\nOCHI_T_C=\"x=y\"\nnot a pair\nOCHI_T_KEEP=file\n",
         encoding="utf-8")
-    monkeypatch.setattr(config, "ROOT", tmp_path)
+    monkeypatch.setenv("OCHI_HOME", str(tmp_path))
     monkeypatch.setenv("OCHI_T_KEEP", "env")
     for k in ("OCHI_T_A", "OCHI_T_B", "OCHI_T_C"):
         monkeypatch.delenv(k, raising=False)
@@ -72,5 +73,39 @@ def test_load_dotenv(tmp_path, monkeypatch):
 
 
 def test_load_dotenv_missing_file(tmp_path, monkeypatch):
-    monkeypatch.setattr(config, "ROOT", tmp_path)
+    monkeypatch.setenv("OCHI_HOME", str(tmp_path))
     config.load_dotenv()  # no error
+
+
+def test_home_is_ochi_home_then_checkout_then_user_dir(tmp_path, monkeypatch):
+    assert config.home() == tmp_path / "ochi-home"  # OCHI_HOME from conftest
+    monkeypatch.delenv("OCHI_HOME")
+    assert config.from_checkout()  # tests run from the repo
+    assert config.home() == config.CHECKOUT
+    monkeypatch.setattr(config, "CHECKOUT", tmp_path / "site-packages")
+    assert config.home() == config.user_dir()
+
+
+def test_config_file_is_read_from_home(tmp_path):
+    home = tmp_path / "ochi-home"
+    home.mkdir()
+    (home / "ochi.toml").write_text("[chrome]\nport = 9555\n", encoding="utf-8")
+    assert config.load()["chrome"]["port"] == 9555
+
+
+def test_user_dir_per_os(tmp_path, monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.setenv("APPDATA", str(tmp_path / "Roaming"))
+    assert config.user_dir() == tmp_path / "Roaming" / "ochi"
+    monkeypatch.setattr(sys, "platform", "linux")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "xdg"))
+    assert config.user_dir() == tmp_path / "xdg" / "ochi"
+    monkeypatch.delenv("XDG_CONFIG_HOME")
+    assert config.user_dir() == Path.home() / ".config" / "ochi"
+    monkeypatch.setattr(sys, "platform", "darwin")
+    assert config.user_dir() == Path.home() / "Library" / "Application Support" / "ochi"
+
+
+def test_bundled_files_exist():
+    for name in ("extractors", "ochi.example.toml", ".env.example"):
+        assert config.bundled(name).exists(), name

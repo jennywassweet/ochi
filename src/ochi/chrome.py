@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import json
 import subprocess
+import sys
 import urllib.request
 from pathlib import Path
 
@@ -34,8 +35,12 @@ def launch() -> subprocess.Popen:
     profile = Path(c["profile"]).expanduser()
     cmd = [str(exe), f"--remote-debugging-port={c['port']}", f"--user-data-dir={profile}", *c["args"]]
     # detached: survives ochi restarts, logs go nowhere
+    if sys.platform == "win32":
+        detach = {"creationflags": subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP}
+    else:
+        detach = {"start_new_session": True}
     return subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                            stdin=subprocess.DEVNULL, start_new_session=True)
+                            stdin=subprocess.DEVNULL, **detach)
 
 
 async def ensure(timeout_s: float = 15) -> dict:

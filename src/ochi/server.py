@@ -3,12 +3,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import sys
 
 from mcp.server.fastmcp import FastMCP
 
 from . import browser, chrome, config, discogs_api, extractors
 
-config.load_dotenv()
 mcp = FastMCP("ochi")
 
 
@@ -82,7 +82,7 @@ def list_extractors() -> str:
 @mcp.tool()
 async def snapshot(url: str) -> str:
     """Save the rendered HTML of a page into snapshots/ (to write or debug an extractor)."""
-    path = await browser.snapshot(url, config.ROOT / "snapshots")
+    path = await browser.snapshot(url, config.home() / "snapshots")
     return f"Saved {path} ({path.stat().st_size} bytes)"
 
 
@@ -113,6 +113,12 @@ async def discogs_listing(listing_id: int) -> str:
 
 
 def main() -> None:
+    """`ochi` runs the MCP server on stdio; `ochi init` sets up the config folder."""
+    if sys.argv[1:2] == ["init"]:
+        from .cli import init
+        init()
+        return
+    config.load_dotenv()
     mcp.run()
 
 

@@ -19,6 +19,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from . import config
+
 HEADER = re.compile(r"//\s*==Extractor==(.*?)//\s*==/Extractor==", re.S)
 FIELD = re.compile(r"//\s*@(\w+)\s+(.*)")
 
@@ -36,16 +38,29 @@ class Extractor:
         return any(fnmatch.fnmatchcase(url, m) for m in self.matches)
 
 
-def extractors_dir() -> Path:
+def builtin_dir() -> Path:
+    return config.bundled("extractors")
+
+
+def user_dir() -> Path:
+    """Your own extractors: OCHI_EXTRACTORS, else extractors/ in ochi's home folder."""
     env = os.environ.get("OCHI_EXTRACTORS")
-    if env:
-        return Path(env).expanduser()
-    return Path(__file__).resolve().parents[2] / "extractors"
+    return Path(env).expanduser() if env else config.home() / "extractors"
 
 
 def load_all() -> list[Extractor]:
+    """Built-in extractors, then the user's; a user extractor with the same @name replaces the built-in one."""
+    by_name: dict[str, Extractor] = {}
+    dirs = dict.fromkeys(d.resolve() for d in (builtin_dir(), user_dir()) if d.is_dir())
+    for d in dirs:
+        for ex in _load_dir(d):
+            by_name[ex.name] = ex
+    return sorted(by_name.values(), key=lambda e: e.name)
+
+
+def _load_dir(directory: Path) -> list[Extractor]:
     result = []
-    for path in sorted(extractors_dir().glob("*.js")):
+    for path in sorted(directory.glob("*.js")):
         text = path.read_text(encoding="utf-8")
         m = HEADER.search(text)
         if not m:

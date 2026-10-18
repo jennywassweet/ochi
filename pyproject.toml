@@ -31,6 +31,12 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/ochi"]
 
+# installed copies (uvx / pip) carry the built-in extractors and the examples for `ochi init`
+[tool.hatch.build.targets.wheel.force-include]
+"extractors" = "ochi/data/extractors"
+"ochi.example.toml" = "ochi/data/ochi.example.toml"
+".env.example" = "ochi/data/env.example"
+
 [dependency-groups]
 dev = [
     "pytest>=8",

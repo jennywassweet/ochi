@@ -34,9 +34,11 @@ def write(dir_, name, header, body="async function extract() { return 1; }"):
 
 @pytest.fixture
 def ex_dir(tmp_path, monkeypatch):
+    """The user's extractors folder, with the built-in ones out of the way."""
     d = tmp_path / "extractors"
     d.mkdir()
     monkeypatch.setenv("OCHI_EXTRACTORS", str(d))
+    monkeypatch.setattr(extractors, "builtin_dir", lambda: tmp_path / "no-builtins")
     return d
 
 
@@ -76,3 +78,20 @@ def test_match_is_case_sensitive_on_every_os(ex_dir):
     write(ex_dir, "a", "// @match https://a.test/Path/*")
     assert extractors.find("https://a.test/Path/1").name == "a"
     assert extractors.find("https://a.test/path/1") is None
+
+
+def test_user_extractors_add_to_and_replace_builtins(tmp_path, monkeypatch):
+    home = tmp_path / "ochi-home"  # OCHI_HOME from conftest
+    (home / "extractors").mkdir(parents=True)
+    write(home / "extractors", "my-generic", "// @name generic\n// @match *\n// @description mine")
+    write(home / "extractors", "shop", "// @match https://shop.test/*")
+    by_name = {e.name: e for e in extractors.load_all()}
+    assert by_name["generic"].description == "mine"
+    assert "discogs-market" in by_name and "shop" in by_name
+    assert extractors.find("https://shop.test/x").name == "shop"
+
+
+def test_same_folder_is_loaded_once(monkeypatch):
+    monkeypatch.setenv("OCHI_EXTRACTORS", str(extractors.builtin_dir()))
+    names = [e.name for e in extractors.load_all()]
+    assert len(names) == len(set(names))

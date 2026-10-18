@@ -9,3 +9,6 @@ snapshot (user id, username, cart, wantlist) before committing.
 - `discogs-shop-list.graphql.json`: the `MarketplaceSearch` GraphQL response the same page loaded
   (25 listings, prices in EUR as seen by the buyer), with the `viewer` block and per-user flags removed.
   `extractors/discogs-market.js` reads listings from this response, not from the HTML.
+- `discogs-seller.html`: synthetic, the old marketplace table (seller shop) reduced to the classes the
+  extractor reads, with prices in mixed formats (`€12.50`, `8,99 €`, `€1,234.50`).
+- `reddit-thread.json`, `reddit-sub.json`: synthetic, minimal shapes of Reddit's `.json` views.

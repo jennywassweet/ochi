@@ -11,9 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 
 _MAC_APPS = ["Google Chrome", "Chromium", "Brave Browser", "Microsoft Edge"]
-_WIN_APPS = [r"Google\Chrome\Application\chrome.exe", r"Chromium\Application\chrome.exe",
-             r"BraveSoftware\Brave-Browser\Application\brave.exe",
-             r"Microsoft\Edge\Application\msedge.exe"]
+_WIN_APPS = ["Google/Chrome/Application/chrome.exe", "Chromium/Application/chrome.exe",
+             "BraveSoftware/Brave-Browser/Application/brave.exe", "Microsoft/Edge/Application/msedge.exe"]
 _LINUX_CMDS = ["google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
                "brave-browser", "microsoft-edge"]
 

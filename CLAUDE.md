@@ -13,4 +13,6 @@
   fix the selector, add a test.
 - Tool docstrings are read by any user's model: keep them neutral (no personal names).
 - Do not add captcha solving, stealth evasion, or paywall bypass.
-- Next ideas: tests + CI, packaging for `uvx`, Readability.js for `generic`, caching, more sites.
+- Tests: `uv run pytest` (no network; `browser`-marked ones run extractors in headless Chromium against
+  `tests/fixtures/`), lint: `uv run ruff check .`. CI: `.github/workflows/ci.yml`, Linux/macOS/Windows.
+- Next ideas: packaging for `uvx`, Readability.js for `generic`, caching, more sites.

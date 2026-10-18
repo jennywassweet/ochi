@@ -79,6 +79,19 @@ pattern wins, and an extractor matching `*` is the fallback.
 
 - `discogs-market`: `ochi_max=20` keeps items up to that price; `ochi_pages=10` caps pagination (250 per page).
 
+## Development
+
+```sh
+uv sync                                  # dev tools included
+uv run ruff check .
+uv run playwright install chromium       # once; browser tests otherwise use an installed Chrome
+uv run pytest
+```
+
+Tests never touch the network: extractors run in headless Chromium against saved pages and JSON in
+`tests/fixtures/`. When a site changes its layout, save a new snapshot there (strip anything tied to your
+account), fix the extractor, adjust the test. CI runs the suite on Linux, macOS and Windows.
+
 ## Security
 
 ochi gives the model a real, logged-in browser. Keep that in mind:

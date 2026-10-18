@@ -67,10 +67,14 @@ def to_text(result, max_chars: int) -> str:
     return text
 
 
+def wrap(code: str) -> str:
+    """The extractor's code as a JS function expression that returns extract()'s result."""
+    return f"async () => {{\n{code}\nreturn await extract();\n}}"
+
+
 async def _wrap_and_eval(page, extractor: Extractor):
     """Run the extractor's code in the page and return extract()'s result."""
-    js = f"async () => {{\n{extractor.code}\nreturn await extract();\n}}"
-    return await page.evaluate(js)
+    return await page.evaluate(wrap(extractor.code))
 
 
 async def tabs() -> list[dict]:

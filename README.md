@@ -73,7 +73,8 @@ ochi's home folder (see Setup; `OCHI_HOME` moves it) holds:
 - `snapshots/`: output of `snapshot`.
 
 Environment variables override the file: `OCHI_CONFIG` (path to the toml), `OCHI_CHROME`,
-`OCHI_PROFILE`, `OCHI_PORT`, `OCHI_EXTRACTORS` (your extractors folder).
+`OCHI_PROFILE`, `OCHI_PORT`, `OCHI_EXTRACTORS` (your extractors folder). `[urls]` controls which
+sites ochi may open (see Security). ochi reads `ochi.toml` once at start: restart it after editing.
 
 ## Writing an extractor
 
@@ -117,7 +118,10 @@ account), fix the extractor, adjust the test. CI runs the suite on Linux, macOS 
 ochi gives the model a real, logged-in browser. Keep that in mind:
 
 - Use the separate ochi profile and log in only where you need to.
-- `fetch`/`show` open whatever URL the model asks for, and `look` reads the visible tab.
+- `fetch`/`show`/`snapshot` open only `http(s)` pages, and by default not `localhost`, `*.local` or
+  private IP addresses (router, NAS, cloud metadata). `[urls]` in `ochi.toml` can allow those, limit ochi to
+  a list of sites (`allow = ["*.discogs.com"]`) or block some (`deny`). Names are not resolved, so a public
+  name pointing at a private address is not caught. `look` reads whatever tab is visible.
 - Page content is untrusted text and can contain instructions aimed at the model (prompt injection).
 - While the browser runs, its debugging port (9222 on 127.0.0.1) lets any local program control it.
 

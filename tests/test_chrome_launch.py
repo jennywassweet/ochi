@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from playwright.async_api import async_playwright
 
-from ochi import chrome, config
+from ochi import browser, chrome, config, extractors
 
 pytestmark = [pytest.mark.anyio, pytest.mark.browser]
 
@@ -50,7 +50,17 @@ async def test_ensure_launches_and_reuses_browser(tmp_path, monkeypatch):
         assert chrome.version() is not None
         assert await chrome.ensure() == info  # already up: no second launch
         assert (tmp_path / "profile").is_dir()
+
+        # one CDP connection serves every call
+        first = await browser.connect()
+        text = await browser.run("data:text/html,<title>T</title><main><p>Hello ochi</p></main>",
+                                 extractors.find("https://example.com/"))
+        assert "# T" in text and "Hello ochi" in text
+        tabs = await browser.tabs()
+        assert tabs and [t["index"] for t in tabs] == list(range(len(tabs)))
+        assert await browser.connect() is first
     finally:
+        await browser.disconnect()
         async with async_playwright() as p:
             b = await p.chromium.connect_over_cdp(chrome.cdp_url())
             cdp = await b.new_browser_cdp_session()

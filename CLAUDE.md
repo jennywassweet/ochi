@@ -16,6 +16,9 @@
 - Discogs/Reddit DOM selectors are best-effort; when they break, take a `snapshot`, keep the HTML as a test fixture,
   fix the selector, add a test.
 - Tool docstrings are read by any user's model: keep them neutral (no personal names).
+- `urlguard.check()` gates every URL that fetch/show/snapshot/ochi-try open (http(s) only, no private hosts
+  unless `[urls]` allows). `browser.connect()` keeps one Playwright driver + CDP connection per event loop;
+  never `async with async_playwright()` per call. Discogs API errors become readable `RuntimeError`s, 429 retried.
 - Do not add captcha solving, stealth evasion, or paywall bypass.
 - Tests: `uv run pytest` (no network; `browser`-marked ones run extractors in headless Chromium against
   `tests/fixtures/`), lint: `uv run ruff check .`. CI: `.github/workflows/ci.yml`, Linux/macOS/Windows.

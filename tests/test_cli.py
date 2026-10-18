@@ -63,3 +63,9 @@ def test_init_creates_home_and_keeps_existing_files(monkeypatch, capsys):
     server.main()
     assert (home / ".env").read_text(encoding="utf-8") == "DISCOGS_TOKEN=mine\n"
     assert capsys.readouterr().out.count("kept") == 2
+
+
+def test_refuses_local_url(monkeypatch):
+    with pytest.raises(SystemExit) as e:
+        run_cli(monkeypatch, "http://localhost:8000/")
+    assert "local/private" in str(e.value.code)

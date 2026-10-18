@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import os
 from pathlib import Path
 
 from playwright.async_api import async_playwright
@@ -25,9 +24,7 @@ async def run(url: str, extractor: Extractor, timeout_ms: int = 30000):
                     await page.wait_for_selector(extractor.wait, timeout=timeout_ms)
                 except Exception:  # noqa: BLE001
                     pass  # extractor gets a chance anyway; it reports what it sees
-            # wrap the script so that it returns extract()'s result
-            js = f"async () => {{\n{extractor.code}\nreturn await extract();\n}}"
-            return await page.evaluate(js)
+            return await _wrap_and_eval(page, extractor)
         finally:
             await page.close()
             # do NOT close the browser: it's the user's Chrome; just drop the connection
@@ -70,9 +67,14 @@ def to_text(result, max_chars: int) -> str:
     return text
 
 
+def wrap(code: str) -> str:
+    """The extractor's code as a JS function expression that returns extract()'s result."""
+    return f"async () => {{\n{code}\nreturn await extract();\n}}"
+
+
 async def _wrap_and_eval(page, extractor: Extractor):
-    js = f"async () => {{\n{extractor.code}\nreturn await extract();\n}}"
-    return await page.evaluate(js)
+    """Run the extractor's code in the page and return extract()'s result."""
+    return await page.evaluate(wrap(extractor.code))
 
 
 async def tabs() -> list[dict]:
@@ -82,7 +84,7 @@ async def tabs() -> list[dict]:
         browser = await p.chromium.connect_over_cdp(chrome.cdp_url())
         out = []
         for ctx in browser.contexts:
-            for i, page in enumerate(ctx.pages):
+            for page in ctx.pages:
                 try:
                     visible = await page.evaluate("document.visibilityState === 'visible'")
                     title = await page.title()
@@ -102,6 +104,8 @@ async def look(index: int | None, find_extractor) -> tuple[str, str, object]:
             raise RuntimeError("No open tabs in the ochi browser.")
         page = None
         if index is not None:
+            if not 0 <= index < len(pages):
+                raise ValueError(f"No tab {index}: there are {len(pages)} (see tabs()).")
             page = pages[index]
         else:
             for pg in reversed(pages):
@@ -113,6 +117,8 @@ async def look(index: int | None, find_extractor) -> tuple[str, str, object]:
                     continue
             page = page or pages[-1]
         ex = find_extractor(page.url)
+        if ex is None:
+            raise RuntimeError("No extractor available (extractors/ folder empty?).")
         return page.url, ex.name, await _wrap_and_eval(page, ex)
 
 

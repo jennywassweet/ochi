@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
@@ -48,9 +47,9 @@ async def look(tab: int | None = None, max_chars: int = 40000) -> str:
 @mcp.tool()
 async def show(url: str) -> str:
     """Open a page for the user in a new visible tab of the ochi browser and leave it open
-    ("look what I found"). Use sparingly: only when he'd want to see it himself."""
+    ("look what I found"). Use sparingly: only when they'd want to see it themselves."""
     title = await browser.show(url)
-    return f"Opened for the user: {title} — {url}"
+    return f"Opened: {title} — {url}"
 
 
 @mcp.tool()

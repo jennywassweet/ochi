@@ -12,8 +12,8 @@ async function extract() {
   const out = [
     `# ${post.title}`,
     `r/${post.subreddit} · u/${post.author} · ${post.score} pts · ${post.num_comments} comments`,
-    post.url !== `https://www.reddit.com${post.permalink}` ? `link: ${post.url}` : '',
-    post.selftext || '',
+    post.url !== `https://www.reddit.com${post.permalink}` ? `link: ${post.url}` : null,
+    post.selftext || null,
     '',
     '## Comments',
   ];

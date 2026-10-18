@@ -1,0 +1,27 @@
+name: New site
+description: Ask for (or offer) an extractor for a site ochi doesn't handle well yet
+title: "[new site] "
+labels: ["extractor", "enhancement"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: Example URL(s)
+      placeholder: https://example.com/catalog?page=1
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: What data should come out
+      description: Which fields per item, or which part of the page; what the generic extractor gets wrong
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope
+      options:
+        - label: The data is visible to a normal visitor in the browser (no captcha solving, paywall bypass or evasion needed)
+          required: true
+        - label: I'd like to write this extractor myself (see CONTRIBUTING.md)

@@ -10,6 +10,10 @@ Claude ──MCP/stdio──▶ ochi (Python) ──Playwright/CDP──▶ your
 
 No Docker, no global Node: Python and dependencies are handled by `uv`. Works on macOS, Windows and Linux.
 
+> **Status:** a personal project, shared as is. It works for me and is tested on macOS, Windows and Linux,
+> but support is best-effort. Issues and pull requests are welcome, especially fixes for extractors broken
+> by site changes and extractors for new sites: see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 ## Setup (once)
 
 1. **uv**: see [installation](https://docs.astral.sh/uv/getting-started/installation/).
@@ -121,6 +125,10 @@ ochi gives the model a real, logged-in browser. Keep that in mind:
 
 Personal use, a handful of pages per session, pauses between pages. No paywall bypassing,
 no captcha solving — if a site asks for a human, the human clicks.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md): how to fix or add an extractor, and what is out of scope.
 
 ## License
 

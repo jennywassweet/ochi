@@ -1,0 +1,18 @@
+name: Bug
+description: Something else doesn't work (setup, browser start, MCP client, Discogs API tools)
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Steps, the command or tool call, the error message, and what you expected
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS, browser, MCP client, how ochi is installed
+      placeholder: Windows 11, Edge 141, Claude Desktop, uvx from git
+    validations:
+      required: true

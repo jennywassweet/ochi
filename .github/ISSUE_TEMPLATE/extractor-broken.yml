@@ -1,0 +1,38 @@
+name: Extractor broken
+description: A site changed and ochi returns nothing, errors, or wrong data
+title: "[extractor] <name>: "
+labels: ["extractor", "bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Sites change their pages, so extractors break now and then. Thanks for reporting!
+        Please don't paste anything tied to your account (usernames, ids, cookies, tokens).
+  - type: input
+    id: extractor
+    attributes:
+      label: Extractor
+      description: "The name ochi prints as `[extractor: …]`, or from `list_extractors`"
+      placeholder: discogs-market
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: URL
+      description: A public page where it breaks (remove personal parts of the URL)
+      placeholder: https://www.discogs.com/shop/list?genre=Rock
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happens
+      description: The output of `ochi-try <url>` or of the tool call (trim long output), and what you expected
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: OS, browser, ochi version
+      placeholder: macOS 15, Chrome 141, ochi from git main (date)

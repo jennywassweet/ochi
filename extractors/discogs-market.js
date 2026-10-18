@@ -17,7 +17,16 @@ async function extract() {
   here.searchParams.set('limit', '250');
 
   const clean = s => (s || '').replace(/\s+/g, ' ').trim();
-  const num = s => { const m = clean(s).replace(',', '.').match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : null; };
+  // "€1,234.50", "1.234,50 €", "$12.5", "12,50" -> number: the last , or . followed by 1-2 digits is the decimal point
+  const num = s => {
+    let t = (clean(s).match(/\d[\d.,]*/) || [])[0];
+    if (!t) return null;
+    const dec = Math.max(t.lastIndexOf('.'), t.lastIndexOf(','));
+    t = dec > -1 && t.length - dec - 1 <= 2
+      ? t.slice(0, dec).replace(/[.,]/g, '') + '.' + t.slice(dec + 1)
+      : t.replace(/[.,]/g, '');
+    return parseFloat(t);
+  };
 
   const parseRows = doc => [...doc.querySelectorAll('table.mpitems tbody tr, tr.shortcut_navigable')].map(tr => {
     const q = s => tr.querySelector(s);

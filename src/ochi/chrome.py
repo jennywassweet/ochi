@@ -11,7 +11,7 @@ from . import config
 
 
 def cdp_url() -> str:
-    return f"http://localhost:{config.load()['chrome']['port']}"
+    return f"http://127.0.0.1:{config.load()['chrome']['port']}"
 
 
 def version() -> dict | None:
@@ -25,6 +25,9 @@ def version() -> dict | None:
 
 def launch() -> None:
     c = config.load()["chrome"]
+    if not c["path"]:
+        raise RuntimeError("No Chrome/Chromium/Brave/Edge found; set [chrome].path in ochi.toml "
+                           "or OCHI_CHROME")
     exe = Path(c["path"]).expanduser()
     if not exe.exists():
         raise RuntimeError(f"Browser binary not found: {exe} (set [chrome].path in ochi.toml)")

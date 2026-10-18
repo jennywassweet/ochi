@@ -1,0 +1,16 @@
+# ochi configuration: copy to ochi.toml and edit. Every key is optional.
+# Secrets (DISCOGS_TOKEN) go to .env, not here.
+
+[chrome]
+# Chrome / Chromium / Brave / Edge binary (any Chromium-based browser).
+# Default: the first one found in the usual install locations / on PATH.
+# path = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+# path = "C:/Program Files/Google/Chrome/Application/chrome.exe"
+# path = "/usr/bin/google-chrome"
+# separate profile: only logins ochi needs live here
+profile = "~/.ochi-profile"
+port = 9222
+# start the browser automatically when a tool needs it and it isn't running
+autostart = true
+# extra command-line flags
+args = ["--no-first-run", "--no-default-browser-check"]

@@ -33,7 +33,7 @@ class Extractor:
     code: str = ""
 
     def matches_url(self, url: str) -> bool:
-        return any(fnmatch.fnmatch(url, m) for m in self.matches)
+        return any(fnmatch.fnmatchcase(url, m) for m in self.matches)
 
 
 def extractors_dir() -> Path:
@@ -75,7 +75,7 @@ def find(url: str) -> Extractor | None:
     if specific:
         # most specific pattern wins (r/*/comments/* beats r/*)
         def score(e: Extractor) -> int:
-            return max(len(m) for m in e.matches if fnmatch.fnmatch(url, m))
+            return max(len(m) for m in e.matches if fnmatch.fnmatchcase(url, m))
         return max(specific, key=score)
     generic = [e for e in all_ex if "*" in e.matches]
     return generic[0] if generic else None

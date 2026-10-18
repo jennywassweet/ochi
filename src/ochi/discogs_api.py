@@ -38,7 +38,7 @@ def release(release_id: int) -> dict:
         "title": f"{', '.join(a['name'] for a in r.get('artists', []))} – {r.get('title')}",
         "year": r.get("year"),
         "country": r.get("country"),
-        "labels": [f"{l['name']} {l.get('catno', '')}".strip() for l in r.get("labels", [])],
+        "labels": [f"{lb['name']} {lb.get('catno', '')}".strip() for lb in r.get("labels", [])],
         "formats": [f"{f.get('qty', '')}×{f['name']} {', '.join(f.get('descriptions', []))} {f.get('text', '')}".strip()
                     for f in r.get("formats", [])],
         "genres": r.get("genres", []),
@@ -55,10 +55,13 @@ def release(release_id: int) -> dict:
 
 def master_versions(master_id: int, format: str = "Vinyl") -> list[dict]:
     d = _get(f"/masters/{master_id}/versions", format=format, per_page=100)
-    return [{"id": v["id"], "label": v.get("label"), "catno": v.get("catno"), "country": v.get("country"),
-             "released": v.get("released"), "format": v.get("format"),
-             "have_want": f"{v['stats']['community']['in_collection']}/{v['stats']['community']['in_wantlist']}"}
-            for v in d.get("versions", [])]
+    out = []
+    for v in d.get("versions", []):
+        c = v.get("stats", {}).get("community", {})
+        out.append({"id": v["id"], "label": v.get("label"), "catno": v.get("catno"), "country": v.get("country"),
+                    "released": v.get("released"), "format": v.get("format"),
+                    "have_want": f"{c.get('in_collection')}/{c.get('in_wantlist')}"})
+    return out
 
 
 def listing(listing_id: int) -> dict:

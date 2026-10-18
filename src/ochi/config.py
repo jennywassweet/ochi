@@ -1,4 +1,7 @@
-"""ochi.toml + .env loading. Env vars override the file (OCHI_CHROME, OCHI_PROFILE, OCHI_PORT)."""
+"""Where ochi keeps its files, ochi.toml + .env loading.
+
+Env vars override the file (OCHI_CHROME, OCHI_PROFILE, OCHI_PORT); OCHI_HOME / OCHI_CONFIG move the files.
+"""
 from __future__ import annotations
 
 import os
@@ -8,7 +11,37 @@ import tomllib
 from functools import lru_cache
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
+PACKAGE = Path(__file__).resolve().parent
+CHECKOUT = PACKAGE.parents[1]  # the repo root when running from a source checkout
+
+
+def from_checkout() -> bool:
+    return (CHECKOUT / "pyproject.toml").is_file() and (CHECKOUT / "src" / "ochi").is_dir()
+
+
+def user_dir() -> Path:
+    """The per-user config folder: ~/Library/Application Support/ochi, %APPDATA%\\ochi, ~/.config/ochi."""
+    if sys.platform == "win32":
+        base = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
+    elif sys.platform == "darwin":
+        base = Path.home() / "Library" / "Application Support"
+    else:
+        base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    return base / "ochi"
+
+
+def home() -> Path:
+    """Folder with ochi.toml, .env, extra extractors/ and snapshots/: OCHI_HOME, else the source
+    checkout when running from one, else the per-user config folder (installed with uvx / pip)."""
+    if v := os.environ.get("OCHI_HOME"):
+        return Path(v).expanduser()
+    return CHECKOUT if from_checkout() else user_dir()
+
+
+def bundled(name: str) -> Path:
+    """A file shipped with ochi (extractors, examples): inside the wheel, or at the checkout root."""
+    inside = PACKAGE / "data" / name.lstrip(".")
+    return inside if inside.exists() else CHECKOUT / name
 
 _MAC_APPS = ["Google Chrome", "Chromium", "Brave Browser", "Microsoft Edge"]
 _WIN_APPS = ["Google/Chrome/Application/chrome.exe", "Chromium/Application/chrome.exe",
@@ -40,7 +73,7 @@ def find_chrome() -> str | None:
 @lru_cache
 def load() -> dict:
     cfg: dict = {}
-    path = Path(os.environ.get("OCHI_CONFIG", ROOT / "ochi.toml"))
+    path = Path(os.environ.get("OCHI_CONFIG") or home() / "ochi.toml")
     if path.exists():
         cfg = tomllib.loads(path.read_text(encoding="utf-8"))
     chrome = cfg.setdefault("chrome", {})
@@ -61,7 +94,7 @@ def load() -> dict:
 
 def load_dotenv() -> None:
     """Minimal .env reader (KEY=VALUE lines) into os.environ, without overriding."""
-    path = ROOT / ".env"
+    path = home() / ".env"
     if not path.exists():
         return
     for line in path.read_text(encoding="utf-8").splitlines():

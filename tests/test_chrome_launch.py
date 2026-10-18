@@ -83,3 +83,21 @@ def test_launch_without_browser_explains(monkeypatch):
     monkeypatch.setattr(config, "find_chrome", lambda: None)
     with pytest.raises(RuntimeError, match="OCHI_CHROME"):
         chrome.launch()
+
+
+@pytest.mark.parametrize(("platform", "expected"), [("linux", "start_new_session"), ("win32", "creationflags")])
+def test_launch_detaches_per_os(tmp_path, monkeypatch, platform, expected):
+    exe = tmp_path / "chrome"
+    exe.touch()
+    monkeypatch.setenv("OCHI_CHROME", str(exe))
+    monkeypatch.setattr(sys, "platform", platform)
+    # the Windows flags only exist in Windows' subprocess module
+    monkeypatch.setattr(chrome.subprocess, "DETACHED_PROCESS", 0x8, raising=False)
+    monkeypatch.setattr(chrome.subprocess, "CREATE_NEW_PROCESS_GROUP", 0x200, raising=False)
+    seen = {}
+    monkeypatch.setattr(chrome.subprocess, "Popen", lambda cmd, **kw: seen.update(cmd=cmd, kw=kw))
+    chrome.launch()
+    assert expected in seen["kw"]
+    assert seen["cmd"][0] == str(exe) and "--remote-debugging-port=9222" in seen["cmd"]
+    if platform == "win32":
+        assert seen["kw"]["creationflags"] == 0x208 and "start_new_session" not in seen["kw"]

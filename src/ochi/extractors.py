@@ -6,6 +6,7 @@ An extractor is a .js file in extractors/ with a Greasemonkey-style header:
     // @name   discogs-seller-shop
     // @match  https://www.discogs.com/seller/*
     // @wait   table
+    // @require lib/Readability.js     (optional, repeatable: a library loaded before the code)
     // ==/Extractor==
 
 and a body that defines `async function extract() { ... }` returning JSON.
@@ -32,6 +33,7 @@ class Extractor:
     matches: list[str] = field(default_factory=list)
     wait: str | None = None
     description: str = ""
+    requires: list[str] = field(default_factory=list)
     code: str = ""
 
     def matches_url(self, url: str) -> bool:
@@ -79,8 +81,20 @@ def _load_dir(directory: Path) -> list[Extractor]:
                 ex.wait = val
             elif key == "description":
                 ex.description = val
+            elif key == "require":
+                ex.requires.append(val)
+        ex.code = "\n".join([*(_library(directory, r) for r in ex.requires), text])
         result.append(ex)
     return result
+
+
+def _library(directory: Path, name: str) -> str:
+    """A @require'd file: next to the extractor, else among the built-in ones (so user extractors can use them)."""
+    for base in (directory, builtin_dir()):
+        path = (base / name).resolve()
+        if path.is_relative_to(base.resolve()) and path.is_file():
+            return path.read_text(encoding="utf-8")
+    return f"throw new Error({f'ochi: @require {name} not found'!r});"
 
 
 def find(url: str) -> Extractor | None:

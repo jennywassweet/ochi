@@ -77,6 +77,14 @@ Environment variables override the file: `OCHI_CONFIG` (path to the toml), `OCHI
 `OCHI_PROFILE`, `OCHI_PORT`, `OCHI_EXTRACTORS` (your extractors folder). `[urls]` controls which
 sites ochi may open (see Security). ochi reads `ochi.toml` once at start: restart it after editing.
 
+## The generic extractor
+
+Pages without a specific extractor go to `generic`. When a page looks like an article (news, blogs, wikis),
+[Mozilla Readability](https://github.com/mozilla/readability) reduces it to the article, with byline and date
+(`[mode: article]`). Other pages (listings, front pages, shops) come back as their main text, one line per block
+(`[mode: page]`). Readability is used only when it keeps a real share of the page's main content; add
+`ochi_mode=page` or `ochi_mode=article` to the URL to force a mode.
+
 ## Writing an extractor
 
 ```js
@@ -92,6 +100,9 @@ async function extract() {
   return { items: [...] };   // or a string
 }
 ```
+
+`// @require lib/Readability.js` in the header loads a library before the code (repeatable). Libraries are looked
+up next to the extractor, then among the built-in ones in `extractors/lib/` (see its README for versions and licenses).
 
 A result `{..., items: [...]}` is rendered one item per line (cheap for the model).
 `@match` is a glob where `*` matches anything (including `/`); the longest matching

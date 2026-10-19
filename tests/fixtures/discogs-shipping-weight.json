@@ -1,0 +1,121 @@
+{
+ "seller_uid": 1002,
+ "currency": "EUR",
+ "policies": [
+  {
+   "id": 2002,
+   "countries": [
+    "Austria",
+    "Belgium",
+    "Denmark",
+    "France",
+    "France (European Territory)",
+    "Germany",
+    "Italy",
+    "Luxembourg",
+    "Monaco",
+    "Spain",
+    "Spain (Canary Islands)",
+    "Sweden"
+   ],
+   "methods": [
+    {
+     "name": "Standard - Swiss Post/Asendia",
+     "description": "Standard - Swiss Post/Asendia",
+     "delivery_min": 3,
+     "delivery_max": 21,
+     "delivery_estimation_description": "3 - 21 Business Days",
+     "constraint_type": "gte",
+     "constraint_price": 0.0,
+     "formatted_constraint_price": "€0.00",
+     "constraint_description": "Subtotal must be at least €0.00 EUR to apply",
+     "range_type": "weight",
+     "ranges": [
+      {
+       "description": "1 - 500 grams: €14.00",
+       "price": 14,
+       "formatted_price": "€14.00",
+       "max": 500,
+       "overflow_units": 0
+      },
+      {
+       "description": "501 and up grams: €2.00 per each additional 200 grams",
+       "price": 2,
+       "formatted_price": "€2.00",
+       "max": 0,
+       "overflow_units": 200
+      }
+     ],
+     "format_ids": []
+    },
+    {
+     "name": "Standard - Swiss Post/Asendia",
+     "description": "Standard - Swiss Post/Asendia",
+     "delivery_min": 3,
+     "delivery_max": 5,
+     "delivery_estimation_description": "3 - 5 Business Days",
+     "constraint_type": "gte",
+     "constraint_price": 0.0,
+     "formatted_constraint_price": "€0.00",
+     "constraint_description": "Subtotal must be at least €0.00 EUR to apply",
+     "range_type": "weight",
+     "ranges": [
+      {
+       "description": "CD & Vinyl (Small) 1 - 500 grams: €9.50",
+       "price": 9.5,
+       "formatted_price": "€9.50",
+       "max": 500,
+       "overflow_units": 0
+      },
+      {
+       "description": "CD & Vinyl (Small) 501 and up grams: €2.20 per each additional 200 grams",
+       "price": 2.2,
+       "formatted_price": "€2.20",
+       "max": 0,
+       "overflow_units": 200
+      }
+     ],
+     "format_ids": [
+      3,
+      2
+     ]
+    },
+    {
+     "name": "Standard - Swiss Post/Asendia",
+     "description": "Standard - Swiss Post/Asendia",
+     "delivery_min": 3,
+     "delivery_max": 5,
+     "delivery_estimation_description": "3 - 5 Business Days",
+     "constraint_type": "gte",
+     "constraint_price": 0.0,
+     "formatted_constraint_price": "€0.00",
+     "constraint_description": "Subtotal must be at least €0.00 EUR to apply",
+     "range_type": "weight",
+     "ranges": [
+      {
+       "description": "Vinyl (Large) 1 - 500 grams: €14.00",
+       "price": 14,
+       "formatted_price": "€14.00",
+       "max": 500,
+       "overflow_units": 0
+      },
+      {
+       "description": "Vinyl (Large) 501 and up grams: €2.00 per each additional 200 grams",
+       "price": 2,
+       "formatted_price": "€2.00",
+       "max": 0,
+       "overflow_units": 200
+      }
+     ],
+     "format_ids": [
+      1
+     ]
+    }
+   ],
+   "free_shipping": false,
+   "free_shipping_min_order_val": null,
+   "formatted_free_shipping_min_order_val": "",
+   "free_shipping_description": ""
+  }
+ ]
+}

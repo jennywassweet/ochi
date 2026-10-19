@@ -115,6 +115,14 @@ async def discogs_listing(listing_id: int) -> str:
     return _j(await asyncio.to_thread(discogs_api.listing, listing_id))
 
 
+@mcp.tool()
+async def discogs_shipping(seller: str, country: str) -> str:
+    """A seller's shipping terms to a country (English name as on Discogs, e.g. "Germany"): methods, delivery days,
+    rates by item count or weight (first item, each additional), minimum order, free-shipping threshold.
+    For comparing combined orders across sellers. Item weights are not available from Discogs."""
+    return _j(await asyncio.to_thread(discogs_api.shipping, seller, country))
+
+
 def main() -> None:
     """`ochi` runs the MCP server on stdio; `ochi init` sets up the config folder."""
     if sys.argv[1:2] == ["init"]:

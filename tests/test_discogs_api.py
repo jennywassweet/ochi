@@ -3,6 +3,7 @@ from __future__ import annotations
 import io
 import json
 import urllib.parse
+from pathlib import Path
 
 import pytest
 
@@ -161,3 +162,75 @@ def test_network_errors_are_explained(monkeypatch):
     monkeypatch.setattr(discogs_api.urllib.request, "urlopen", urlopen)
     with pytest.raises(RuntimeError, match="Can't reach the Discogs API"):
         discogs_api._get("/x")
+
+
+def shipping_fixture(kind):
+    path = Path(__file__).parent / "fixtures" / f"discogs-shipping-{kind}.json"
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+@pytest.fixture
+def shipping_api(fake_get):
+    calls, responses = fake_get
+    responses["/users/someone"] = {"id": 42, "username": "someone"}
+
+    def use(kind):
+        responses["/v3/marketplace/shipping/policies"] = shipping_fixture(kind)
+        return discogs_api.shipping("someone", "Germany")
+
+    return calls, use
+
+
+def test_shipping_by_quantity(shipping_api):
+    calls, use = shipping_api
+    r = use("quantity")
+    assert calls[-1] == ("/v3/marketplace/shipping/policies", {"seller_id": 42, "country": "Germany"})
+    assert (r["seller"], r["country"], r["currency"], r["ships"]) == ("someone", "Germany", "EUR", True)
+    assert "free_shipping_from" not in r
+    lp = next(m for m in r["methods"] if any("Vinyl (Large)" in x for x in m.get("rates", [])))
+    assert lp["by"] == "quantity" and lp["days"]
+    assert lp["rates"] == ["1 - 1 Vinyl (Large): €20.00", "2 and up Vinyl (Large): €2.00 per each additional 1 item"]
+
+
+def test_shipping_by_weight(shipping_api):
+    _, use = shipping_api
+    r = use("weight")
+    assert {m["by"] for m in r["methods"]} == {"weight"}
+    assert "501 and up grams: €2.00 per each additional 200 grams" in r["methods"][0]["rates"]
+
+
+def test_shipping_free_threshold_and_rate_less_methods(shipping_api):
+    _, use = shipping_api
+    r = use("free")
+    assert r["currency"] == "USD" and r["free_shipping_from"] == "$1,000.00"
+    by_name = {m["name"]: m for m in r["methods"]}
+    assert by_name["Standard - Local Mail"]["rates"][0] == "1 - 3 items: $15.00"
+    assert by_name["Free Shipping"] == {"name": "Free Shipping", "min_order": "$1,000.00"}
+    assert by_name["Local Pickup"] == {"name": "Local Pickup"}
+
+
+def test_shipping_not_to_this_country(shipping_api):
+    _, use = shipping_api
+    r = use("none")
+    assert r["ships"] is False and "doesn't ship" in r["note"] and "methods" not in r
+
+
+def test_shipping_is_a_single_read_only_request_to_the_api(monkeypatch):
+    """Two GETs to api.discogs.com (user lookup, policies), with the token and no cookies: nothing touches a cart."""
+    seen = []
+
+    def urlopen(req, timeout):
+        seen.append((req.get_method(), urllib.parse.urlsplit(req.full_url), dict(req.header_items())))
+        body = {"id": 42} if "/users/" in req.full_url else shipping_fixture("quantity")
+        return io.BytesIO(json.dumps(body).encode())
+
+    monkeypatch.setattr(discogs_api.urllib.request, "urlopen", urlopen)
+    monkeypatch.setenv("DISCOGS_TOKEN", "t0k")
+    discogs_api.shipping("someone", "Germany")
+    assert [(m, u.netloc, u.path) for m, u, _ in seen] == [
+        ("GET", "api.discogs.com", "/users/someone"),
+        ("GET", "api.discogs.com", "/v3/marketplace/shipping/policies"),
+    ]
+    for _, _, headers in seen:
+        assert headers["Authorization"] == "Discogs token=t0k"
+        assert "Cookie" not in headers

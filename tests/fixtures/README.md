@@ -12,3 +12,6 @@ snapshot (user id, username, cart, wantlist) before committing.
 - `discogs-seller.html`: synthetic, the old marketplace table (seller shop) reduced to the classes the
   extractor reads, with prices in mixed formats (`€12.50`, `8,99 €`, `€1,234.50`).
 - `reddit-thread.json`, `reddit-sub.json`: synthetic, minimal shapes of Reddit's `.json` views.
+- `discogs-shipping-{quantity,weight,free,none}.json`: responses of
+  `api.discogs.com/v3/marketplace/shipping/policies?seller_id=…&country=Germany`, 2026-10-19, for four real sellers
+  (ids and names replaced): tiered rates per item, per weight, a free-shipping threshold, and no policy.

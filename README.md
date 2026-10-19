@@ -62,6 +62,7 @@ No Docker, no global Node: Python and dependencies are handled by `uv`. Works on
 | `snapshot(url)` | save rendered HTML to `snapshots/` — for writing/fixing extractors |
 | `browser_start()` / `browser_status()` | start / check the ochi Chrome |
 | `discogs_search`, `discogs_release`, `discogs_master_versions`, `discogs_listing` | the bits of the Discogs API we use (structured, no browser) |
+| `discogs_shipping(seller, country)` | a seller's shipping terms to a country: methods, days, rates per item count or weight, minimum order, free-shipping threshold (needs `DISCOGS_TOKEN`; uses the same undocumented endpoint as the site's "shipping" button, read-only) |
 
 ## Configuration
 

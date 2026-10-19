@@ -19,6 +19,7 @@ assert not config.from_checkout(), config.CHECKOUT
 names = {e.name for e in extractors.load_all()}
 assert {"generic", "discogs-market", "reddit-thread", "reddit-sub"} <= names, names
 assert extractors.find("https://www.reddit.com/r/x/comments/1/").name == "reddit-thread"
+assert "function Readability(" in extractors.find("https://example.com/").code
 print("home", config.home())
 """
 
@@ -34,6 +35,7 @@ def wheel(tmp_path_factory):
 def test_wheel_contains_extractors_and_examples(wheel):
     names = set(zipfile.ZipFile(wheel).namelist())
     for f in ("ochi/data/extractors/generic.js", "ochi/data/extractors/discogs-market.js",
+              "ochi/data/extractors/lib/Readability.js", "ochi/data/extractors/lib/LICENSE-readability.md",
               "ochi/data/ochi.example.toml", "ochi/data/env.example", "ochi/server.py"):
         assert f in names, f
     assert not any(n.startswith("tests/") or n.endswith(".env") for n in names)

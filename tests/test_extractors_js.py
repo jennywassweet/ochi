@@ -72,7 +72,7 @@ def test_generic_keeps_main_text_and_drops_chrome(site):
         <nav>Menu Home About</nav><article><h1>Head line</h1><p>First   para.</p><script>var x=1</script>
         <aside>Ad</aside><p>Second para.</p></article><footer>Footer text</footer></body></html>"""))
     text = run(site, "https://example.test/post")
-    assert text.splitlines()[:3] == ["# Hello", "https://example.test/post", ""]
+    assert text.splitlines()[:4] == ["# Hello", "https://example.test/post", "[mode: page]", ""]  # too short
     assert "Head line" in text and "First para." in text and "Second para." in text
     for junk in ("Menu", "Ad", "Footer", "var x"):
         assert junk not in text
@@ -217,6 +217,50 @@ def test_discogs_release_sellers_in_buyer_currency(site):
     # $44.99 is about €40.04 for the buyer, so it passes a 41 (EUR) limit; €45.00 doesn't
     assert {"4413292671", "4410581886"} <= {i["id"] for i in cheap["items"]}
     assert "3248375315" not in {i["id"] for i in cheap["items"]}
+
+
+ARTICLE = """<html><head><title>Site | Long read</title>
+<meta name="author" content="Jane Writer"><meta property="article:published_time" content="2026-10-01T10:00:00Z">
+</head><body>
+<div class="top">Home Music Film Books Sign in Subscribe Search</div>
+<div class="layout"><div class="sidebar">Most viewed: one, two, three. Newsletter: sign up now.</div>
+<div class="story"><h1>Long read</h1><p class="byline">By Jane Writer</p>
+""" + "".join(f"<p>Paragraph {i}: the band recorded the album in a farmhouse, with tape machines, borrowed amps "
+              f"and a great deal of patience, and the result still sounds strange and wonderful today.</p>"
+              for i in range(12)) + """
+<h2>Afterwards</h2><ul><li>First pressing on a small label</li><li>Reissued twice</li></ul>
+</div></div><footer>© Site. Cookies. Terms. Contact.</footer></body></html>"""
+
+LISTING = """<html><head><title>Reviews</title></head><body><main><h1>Album reviews</h1>
+""" + "".join(f"<div class='card'><a href='/r/{i}'>Artist {i} – Album {i}</a> <span>Rating {i % 10}</span> "
+              f"<p>A short teaser sentence about album number {i} that runs to a few words.</p></div>"
+              for i in range(40)) + "</main></body></html>"
+
+
+def test_generic_article_mode(site):
+    site.routes.append(("example.test", HTML, ARTICLE))
+    lines = run(site, "https://example.test/long-read").splitlines()
+    assert lines[0].endswith("Long read")  # Readability's pick of the title
+    assert lines[2].startswith("[mode: article") and "2026-10-01" in lines[2]
+    body = "\n".join(lines[4:])
+    assert "Paragraph 0: the band" in body and "Paragraph 11:" in body
+    assert "## Afterwards" in body and "- Reissued twice" in body
+    for junk in ("Most viewed", "Sign in", "Cookies"):
+        assert junk not in body
+
+
+def test_generic_listing_stays_page_mode(site):
+    site.routes.append(("example.test", HTML, LISTING))
+    lines = run(site, "https://example.test/reviews").splitlines()
+    assert lines[2] == "[mode: page]"
+    assert sum("Artist" in line for line in lines) >= 40
+
+
+@pytest.mark.parametrize(("html", "param", "mode"), [(ARTICLE, "page", "[mode: page]"),
+                                                       (LISTING, "article", "[mode: article")])
+def test_generic_mode_can_be_forced(site, html, param, mode):
+    site.routes.append(("example.test", HTML, html))
+    assert run(site, f"https://example.test/x?ochi_mode={param}").splitlines()[2].startswith(mode)
 
 
 def test_discogs_release_stats(site):

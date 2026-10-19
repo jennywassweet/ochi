@@ -26,5 +26,5 @@
 - Do not add captcha solving, stealth evasion, or paywall bypass.
 - Tests: `uv run pytest` (no network; `browser`-marked ones run extractors in headless Chromium against
   `tests/fixtures/`), lint: `uv run ruff check .`. CI: `.github/workflows/ci.yml`, Linux/macOS/Windows.
-- Next ideas: `discogs_wantlist`, Readability.js for `generic`, Last.fm as a data source, caching, more sites.
+- Next ideas: Last.fm as a data source, caching, more sites.
   PyPI was considered and skipped for now (no commitment to a release cadence); install is `uvx --from git+…`.

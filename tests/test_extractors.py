@@ -99,3 +99,35 @@ def test_same_folder_is_loaded_once(monkeypatch):
     monkeypatch.setenv("OCHI_EXTRACTORS", str(extractors.builtin_dir()))
     names = [e.name for e in extractors.load_all()]
     assert len(names) == len(set(names))
+
+
+def test_require_loads_libraries_before_the_code(ex_dir):
+    (ex_dir / "lib").mkdir()
+    (ex_dir / "lib" / "helper.js").write_text("function helper() { return 1; }", encoding="utf-8")
+    write(ex_dir, "uses", "// @match https://a.test/*\n// @require lib/helper.js")
+    ex = extractors.load_all()[0]
+    assert ex.requires == ["lib/helper.js"]
+    assert ex.code.index("function helper") < ex.code.index("async function extract")
+
+
+def test_require_falls_back_to_builtin_libraries(ex_dir, monkeypatch, tmp_path):
+    builtin = tmp_path / "builtin"
+    (builtin / "lib").mkdir(parents=True)
+    (builtin / "lib" / "shared.js").write_text("function shared() {}", encoding="utf-8")
+    monkeypatch.setattr(extractors, "builtin_dir", lambda: builtin)
+    write(ex_dir, "mine", "// @match https://a.test/*\n// @require lib/shared.js")
+    assert "function shared" in {e.name: e for e in extractors.load_all()}["mine"].code
+
+
+@pytest.mark.parametrize("name", ["lib/missing.js", "../../../etc/passwd"])
+def test_require_missing_or_outside_fails_loudly_when_run(ex_dir, name):
+    write(ex_dir, "broken", f"// @match https://a.test/*\n// @require {name}")
+    code = extractors.load_all()[0].code
+    assert code.startswith("throw new Error(") and "not found" in code.splitlines()[0]
+    assert "root:" not in code
+
+
+def test_generic_bundles_readability():
+    g = extractors.find("https://example.com/")
+    assert g.requires == ["lib/Readability-readerable.js", "lib/Readability.js"]
+    assert "function Readability(" in g.code and "function isProbablyReaderable(" in g.code

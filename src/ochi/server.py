@@ -125,6 +125,21 @@ async def discogs_shipping(seller: str, country: str) -> str:
     return _j(await asyncio.to_thread(discogs_api.shipping, seller, country))
 
 
+@mcp.tool()
+async def discogs_wantlist(username: str = "", query: str = "", limit: int = 500) -> str:
+    """A Discogs wantlist (default: the token owner's), one release per line: release_id, artist – title, year,
+    format, label + catno, styles, date added, notes. `query` keeps lines containing it (case-insensitive),
+    e.g. "psychedelic", "Blue Note", "7\"". Private wantlists need the owner's token."""
+    return _j(await asyncio.to_thread(discogs_api.wantlist, username, query, limit))
+
+
+@mcp.tool()
+async def discogs_collection(username: str = "", query: str = "", limit: int = 500) -> str:
+    """A Discogs collection (default: the token owner's), same fields as discogs_wantlist plus rating;
+    e.g. to see what is already owned. `query` filters like in discogs_wantlist."""
+    return _j(await asyncio.to_thread(discogs_api.collection, username, query, limit))
+
+
 def main() -> None:
     """`ochi` runs the MCP server on stdio; `ochi init` sets up the config folder."""
     if sys.argv[1:2] == ["init"]:

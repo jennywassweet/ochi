@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 
 API = "https://api.discogs.com"
-UA = "ochi/0.2 +https://github.com/jennywassweet/ochi"
+UA = "ochi/0.3 +https://github.com/jennywassweet/ochi"
 
 
 RETRIES = 3  # on 429 (rate limit: 60 requests/min with a token, 25 without)

@@ -234,3 +234,78 @@ def test_shipping_is_a_single_read_only_request_to_the_api(monkeypatch):
     for _, _, headers in seen:
         assert headers["Authorization"] == "Discogs token=t0k"
         assert "Cookie" not in headers
+
+
+def info(i, artist, title, style, fmt="LP"):
+    return {"id": i, "title": title, "year": 1970 + i, "artists": [{"name": artist}],
+            "labels": [{"name": "Lab", "catno": f"L-{i}"}, {"name": "Lab", "catno": f"L-{i}"}],
+            "formats": [{"name": "Vinyl", "qty": "1", "descriptions": [fmt, "Album"]}],
+            "styles": [style], "genres": ["Rock"], "master_id": 0}
+
+
+@pytest.fixture
+def account(fake_get):
+    calls, responses = fake_get
+    responses["/oauth/identity"] = {"username": "me"}
+
+    # /wants: two pages, 100 + 1 entries
+    pages = {1: [{"basic_information": info(i, "Band", f"T{i}", "Psychedelic Rock" if i % 2 else "Doom Metal"),
+                  "date_added": "2026-01-02T03:04:05-07:00", "notes": "first press!" if i == 1 else ""}
+                 for i in range(1, 101)],
+             2: [{"basic_information": info(101, "Other", "Last", "Krautrock", fmt="7\""),
+                  "date_added": "2026-02-02T00:00:00-07:00", "notes": ""}]}
+
+    def get(path, **params):
+        calls.append((path, params))
+        if path == "/users/me/wants":
+            assert params["per_page"] == 100
+            return {"pagination": {"pages": 2}, "wants": pages[params["page"]]}
+        if path == "/users/me/collection/folders/0/releases":
+            return {"pagination": {"pages": 1}, "releases": [
+                {"basic_information": info(5, "Owned", "Record", "Jazz"), "date_added": "2025-05-05", "rating": 4},
+                {"basic_information": info(6, "Owned", "Unrated", "Jazz"), "date_added": "2025-05-06", "rating": 0},
+            ]}
+        return responses[path]
+
+    import ochi.discogs_api as api
+    return calls, get, api
+
+
+def test_wantlist_of_token_owner_all_pages(account, monkeypatch):
+    calls, get, api = account
+    monkeypatch.setattr(api, "_get", get)
+    rows = api.wantlist()
+    assert calls[0] == ("/oauth/identity", {})
+    assert len(rows) == 101
+    assert rows[0] == {"release_id": 1, "title": "Band – T1", "year": 1971, "format": "1×Vinyl LP, Album",
+                       "label": "Lab L-1", "styles": "Psychedelic Rock", "added": "2026-01-02", "notes": "first press!"}
+    assert rows[-1]["format"] == '1×Vinyl 7", Album'
+
+
+def test_wantlist_query_and_limit(account, monkeypatch):
+    _, get, api = account
+    monkeypatch.setattr(api, "_get", get)
+    psych = api.wantlist(query="PSYCHEDELIC")
+    assert len(psych) == 50 and all("Psychedelic" in r["styles"] for r in psych)
+    assert [r["release_id"] for r in api.wantlist(query='7"')] == [101]
+    assert len(api.wantlist(limit=3)) == 3
+
+
+def test_wantlist_of_another_user_skips_identity(account, monkeypatch):
+    calls, get, api = account
+
+    def other(path, **params):
+        calls.append((path, params))
+        return {"pagination": {"pages": 1}, "wants": []}
+
+    monkeypatch.setattr(api, "_get", other)
+    assert api.wantlist("some one") == []
+    assert calls == [("/users/some%20one/wants", {"per_page": 100, "page": 1})]
+
+
+def test_collection(account, monkeypatch):
+    _, get, api = account
+    monkeypatch.setattr(api, "_get", get)
+    rows = api.collection()
+    assert rows[0]["title"] == "Owned – Record" and rows[0]["rating"] == 4 and rows[0]["added"] == "2025-05-05"
+    assert "rating" not in rows[1]

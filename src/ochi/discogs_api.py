@@ -119,3 +119,41 @@ def listing(listing_id: int) -> dict:
         "seller": s.get("username"), "rating": s.get("stats", {}).get("rating"),
         "ratings_total": s.get("stats", {}).get("total"), "url": d.get("uri"),
     }
+
+
+def seller_id(username: str) -> int:
+    return _get(f"/users/{urllib.parse.quote(username)}")["id"]
+
+
+def shipping(seller: str, country: str) -> dict:
+    """A seller's shipping terms to one country, as Discogs shows them under a listing's "shipping" button.
+
+    Uses the site's own v3 endpoint (undocumented, needs a token). Read-only: a GET with the token, no session,
+    so it never touches a cart. Rates are Discogs' own descriptions ("2 and up items: €2.00 per each additional
+    1 item"); combining them into an order total is left to the caller.
+    """
+    d = _get("/v3/marketplace/shipping/policies", seller_id=seller_id(seller), country=country)
+    out: dict = {"seller": seller, "country": country, "currency": d.get("currency")}
+    policies = d.get("policies") or []
+    if not policies:
+        out["ships"] = False
+        out["note"] = f"the seller has no shipping policy for {country}: doesn't ship there"
+        return out
+    out["ships"] = True
+    methods = []
+    for p in policies:
+        if p.get("free_shipping"):
+            out["free_shipping_from"] = p.get("formatted_free_shipping_min_order_val") or "any order"
+        for m in p.get("methods", []):
+            row = {"name": m.get("name")}
+            if m.get("delivery_max"):
+                row["days"] = f"{m.get('delivery_min')}-{m['delivery_max']}"
+            if m.get("range_type"):
+                row["by"] = m["range_type"]  # quantity (items) or weight (grams)
+            if (m.get("constraint_price") or 0) > 0:
+                row["min_order"] = m.get("formatted_constraint_price")
+            if rates := [r["description"] for r in m.get("ranges", []) if r.get("description")]:
+                row["rates"] = rates
+            methods.append(row)
+    out["methods"] = methods
+    return out

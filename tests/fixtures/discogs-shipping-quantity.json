@@ -1,0 +1,166 @@
+{
+ "seller_uid": 1001,
+ "currency": "EUR",
+ "policies": [
+  {
+   "id": 2001,
+   "countries": [
+    "Austria",
+    "Belgium",
+    "Bulgaria",
+    "Croatia",
+    "Cyprus",
+    "Czech Republic",
+    "Denmark",
+    "Estonia",
+    "Finland",
+    "France",
+    "Germany",
+    "Greece",
+    "Hungary",
+    "Ireland",
+    "Italy",
+    "Luxembourg",
+    "Malta",
+    "Netherlands",
+    "Poland",
+    "Portugal",
+    "Romania",
+    "Slovak Republic",
+    "Slovenia",
+    "Spain",
+    "Sweden"
+   ],
+   "methods": [
+    {
+     "name": "Standard - International Signed For",
+     "description": "Standard - International Signed For",
+     "delivery_min": 4,
+     "delivery_max": 7,
+     "delivery_estimation_description": "4 - 7 Business Days",
+     "constraint_type": "gte",
+     "constraint_price": 0.0,
+     "formatted_constraint_price": "€0.00",
+     "constraint_description": "Subtotal must be at least €0.00 EUR to apply",
+     "range_type": "quantity",
+     "ranges": [
+      {
+       "description": "1 - 1 Vinyl (Large): €20.00",
+       "price": 20,
+       "formatted_price": "€20.00",
+       "max": 1,
+       "overflow_units": 0
+      },
+      {
+       "description": "2 and up Vinyl (Large): €2.00 per each additional 1 item",
+       "price": 2,
+       "formatted_price": "€2.00",
+       "max": 0,
+       "overflow_units": 1
+      }
+     ],
+     "format_ids": [
+      1
+     ]
+    },
+    {
+     "name": "Standard - International Signed For",
+     "description": "Standard - International Signed For",
+     "delivery_min": 4,
+     "delivery_max": 7,
+     "delivery_estimation_description": "4 - 7 Business Days",
+     "constraint_type": "gte",
+     "constraint_price": 0.0,
+     "formatted_constraint_price": "€0.00",
+     "constraint_description": "Subtotal must be at least €0.00 EUR to apply",
+     "range_type": "quantity",
+     "ranges": [
+      {
+       "description": "1 - 1 DVD/Blu-ray & Vinyl (Small): €11.00",
+       "price": 11,
+       "formatted_price": "€11.00",
+       "max": 1,
+       "overflow_units": 0
+      },
+      {
+       "description": "2 and up DVD/Blu-ray & Vinyl (Small): €2.00 per each additional 1 item",
+       "price": 2,
+       "formatted_price": "€2.00",
+       "max": 0,
+       "overflow_units": 1
+      }
+     ],
+     "format_ids": [
+      5,
+      2
+     ]
+    },
+    {
+     "name": "Standard - Registered",
+     "description": "Standard - Registered",
+     "delivery_min": 5,
+     "delivery_max": 7,
+     "delivery_estimation_description": "5 - 7 Business Days",
+     "constraint_type": "gte",
+     "constraint_price": 0.0,
+     "formatted_constraint_price": "€0.00",
+     "constraint_description": "Subtotal must be at least €0.00 EUR to apply",
+     "range_type": "quantity",
+     "ranges": [
+      {
+       "description": "1 - 1 CD & Cassette: €9.00",
+       "price": 9,
+       "formatted_price": "€9.00",
+       "max": 1,
+       "overflow_units": 0
+      },
+      {
+       "description": "2 and up CD & Cassette: €1.00 per each additional 1 item",
+       "price": 1,
+       "formatted_price": "€1.00",
+       "max": 0,
+       "overflow_units": 1
+      }
+     ],
+     "format_ids": [
+      3,
+      4
+     ]
+    },
+    {
+     "name": "Standard",
+     "description": "Standard",
+     "delivery_min": 3,
+     "delivery_max": 5,
+     "delivery_estimation_description": "3 - 5 Business Days",
+     "constraint_type": "gte",
+     "constraint_price": 0.0,
+     "formatted_constraint_price": "€0.00",
+     "constraint_description": "Subtotal must be at least €0.00 EUR to apply",
+     "range_type": "quantity",
+     "ranges": [
+      {
+       "description": "1 - 1 items: €18.00",
+       "price": 18,
+       "formatted_price": "€18.00",
+       "max": 1,
+       "overflow_units": 0
+      },
+      {
+       "description": "2 and up items: €2.00 per each additional 1 item",
+       "price": 2,
+       "formatted_price": "€2.00",
+       "max": 0,
+       "overflow_units": 1
+      }
+     ],
+     "format_ids": []
+    }
+   ],
+   "free_shipping": false,
+   "free_shipping_min_order_val": null,
+   "formatted_free_shipping_min_order_val": "",
+   "free_shipping_description": ""
+  }
+ ]
+}

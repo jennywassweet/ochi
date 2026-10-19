@@ -3,6 +3,9 @@
 Saved pages for extractor tests. Strip scripts, styles and anything tied to the account that took the
 snapshot (user id, username, cart, wantlist) before committing.
 
+- `discogs-shipping-{quantity,weight,free,none}.json`: responses of
+  `api.discogs.com/v3/marketplace/shipping/policies?seller_id=…&country=Germany`, 2026-10-19, for four real sellers
+  (ids and names replaced): tiered rates per item, per weight, a free-shipping threshold, and no policy.
 - `discogs-shop-list.html`: `https://www.discogs.com/shop/list?genre=Rock&formatName=Vinyl`, 2026-10-18
   (`ochi-try --snapshot`, then cleaned). The new marketplace is a React app: the HTML has the filters, the
   results footer ("1 – 25 of 13.3M") and only the first few `.msr-listing-card` rows.

@@ -9,7 +9,8 @@ from ochi import browser, chrome, discogs_api, server
 pytestmark = pytest.mark.anyio
 
 TOOLS = {"fetch", "look", "show", "tabs", "browser_start", "browser_status", "list_extractors", "snapshot",
-         "discogs_search", "discogs_release", "discogs_master_versions", "discogs_listing"}
+         "discogs_search", "discogs_release", "discogs_master_versions", "discogs_listing",
+         "discogs_shipping"}
 
 
 async def call(name, **args):

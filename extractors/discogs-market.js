@@ -7,15 +7,29 @@
 // @match       https://www.discogs.com/shop/*
 // @match       https://www.discogs.com/*/shop/*
 // @wait        table.mpitems, .pagination_total, .msr-listing-card, .msr-results-footer
-// @description Discogs marketplace lists (marketplace search /shop/list, seller shop with filters, sellers of a release). Extra URL param ochi_max=20 keeps only items up to that price.
+// @description Discogs marketplace lists (marketplace search /shop/list, seller shop with filters, sellers of a release). Extra URL params: ochi_max, ochi_max_total (price+shipping), ochi_min_media / ochi_min_sleeve (VG+, NM…), ochi_sort=price|total, ochi_fields=title,price,…, ochi_pages.
 // ==/Extractor==
 
 async function extract() {
   const here = new URL(location.href);
-  const maxPrice = parseFloat(here.searchParams.get('ochi_max') || 'Infinity');
-  const maxPages = parseInt(here.searchParams.get('ochi_pages') || '10', 10);
-  here.searchParams.delete('ochi_max');
-  here.searchParams.delete('ochi_pages');
+  // ochi_* params filter and shape the result here; they are not sent to Discogs
+  const opt = k => here.searchParams.get(`ochi_${k}`);
+  const maxPrice = parseFloat(opt('max') || 'Infinity');
+  const maxTotal = parseFloat(opt('max_total') || 'Infinity');
+  const maxPages = parseInt(opt('pages') || '10', 10);
+  const minMedia = opt('min_media')?.toUpperCase();
+  const minSleeve = opt('min_sleeve')?.toUpperCase();
+  const sortBy = opt('sort');
+  const fields = opt('fields')?.split(',').map(s => s.trim()).filter(Boolean);
+  [...here.searchParams.keys()].filter(k => k.startsWith('ochi_')).forEach(k => here.searchParams.delete(k));
+
+  // grading scale, best first; "Generic", "No Cover", "Not Graded" have no rank
+  const RANK = { M: 8, NM: 7, 'M-': 7, 'VG+': 6, VG: 5, 'G+': 4, G: 3, F: 2, P: 1 };
+  const rank = g => RANK[((g || '').match(/\(([A-Z+-]+)/) || [])[1]] ?? null;
+  for (const [k, v] of [['min_media', minMedia], ['min_sleeve', minSleeve]]) {
+    if (v && !(v in RANK)) return { error: `ochi_${k}=${v}: use one of ${Object.keys(RANK).join(', ')}` };
+  }
+  if (sortBy && !['price', 'total'].includes(sortBy)) return { error: `ochi_sort=${sortBy}: use price or total` };
 
   const clean = s => (s || '').replace(/\s+/g, ' ').trim();
   // "€1,234.50", "1.234,50 €", "$12.5", "12,50" -> number: the last , or . followed by 1-2 digits is the decimal point
@@ -45,10 +59,25 @@ async function extract() {
       shipping: clean(q('.item_shipping')?.innerText).replace(/\s*shipping.*$/i, ''),
       seller: clean(q('.seller_info a[href*="/seller/"], .seller_info strong a')?.innerText),
       rating: (sellerLis.join(' ').match(/(\d{2,3}(?:\.\d)?%)/) || [])[1] || '',
-      from: (sellerLis.join(' ').match(/Ships From:\s*([^,]+?)(?:$|\s{2}|Buy)/i) || [])[1] || '',
+      from: (sellerLis.find(s => /^Ships From:/i.test(s)) || '').replace(/^Ships From:\s*/i, ''),
+      free_over: (sellerLis.join(' ').match(/Free shipping on orders (\S+) or more/i) || [])[1] || '',
     };
     if (!row.media && cond) row.cond = cond.slice(0, 80);
-    row._p = num(row.price);
+    // prices are in the seller's currency; Discogs adds conversions to the buyer's:
+    // next to the price ("about €40.04") and, when shipping to the buyer is known, the total with shipping
+    const [priceBox, totalBox] = tr.querySelectorAll('td.item_price > div');
+    const priceConv = num(priceBox?.querySelector('.converted_price')?.innerText);
+    const totalConv = num(totalBox?.querySelector('.converted_price')?.innerText);
+    const p = num(row.price);
+    const s = /\d/.test(row.shipping) ? num(row.shipping) : null;
+    if (totalConv !== null && p !== null && s !== null) {
+      row._p = priceConv ?? Math.round(totalConv * p / (p + s) * 100) / 100;
+      row._s = Math.round((totalConv - row._p) * 100) / 100;
+    } else {
+      row._p = priceConv ?? p;
+      row._s = priceConv === null ? s : null;  // a shipping amount in another currency can't be added
+    }
+    if (s === null) row.shipping = '?';  // not shown for the buyer's country: check the seller's terms
     return row;
   }).filter(Boolean);
 
@@ -88,6 +117,7 @@ async function extract() {
       from: n.sellerInfo?.shipsFrom || '',
       release: r.discogsId,
       _p: price?.amount ?? null,
+      _s: ship ? ship.amount : null,
     };
   };
   const findShopQuery = async () => {
@@ -149,32 +179,50 @@ async function extract() {
   }
 
   const all = [...items.values()];
-  const kept = all.filter(r => r._p === null || r._p <= maxPrice);
-  // tidy: short grades, no "Label:" noise
+  all.forEach(r => {
+    // short grades: "Very Good Plus (VG+)" without the seller's notes after it
+    if (r.media) r.media = r.media.replace(/\).*$/, ')');
+    if (r.sleeve) r.sleeve = r.sleeve.replace(/\).*$/, ')');
+    if (r._p !== null && r._s !== null) r.total = Math.round((r._p + r._s) * 100) / 100;
+  });
+  const atLeast = (g, min) => !min || (rank(g) ?? 0) >= RANK[min];
+  let kept = all.filter(r => (r._p === null || r._p <= maxPrice)
+    && (r.total ?? r._p ?? 0) <= maxTotal  // shipping unknown: judged by price alone
+    && atLeast(r.media, minMedia) && atLeast(r.sleeve, minSleeve));
+  if (sortBy) {
+    // by total: items whose shipping is unknown go last (then by price)
+    const keys = r => (sortBy === 'total' ? [r.total ?? Infinity, r._p ?? Infinity] : [r._p ?? Infinity, 0]);
+    kept.sort((a, b) => { const [a1, a2] = keys(a), [b1, b2] = keys(b); return a1 - b1 || a2 - b2; });
+  }
+  // tidy: no helper fields, no "Label:" noise
   kept.forEach(r => {
     delete r._p;
-    if (r.media) r.media = r.media.replace(/\).*$/, ')');
+    delete r._s;
     const w = (r.from || '').match(/\s*Has (\d+) items? I want/i);
     if (w) { r.from = r.from.replace(w[0], '').trim(); if (+w[1] > 0) r.wants = +w[1]; }
-    if (r.shipping === '+') r.shipping = '';
     if (r.label) r.label = r.label.replace(/^Label:\s*/, '').replace(/\s*Cat#:\s*/, ' · ');
   });
   // fields identical across all rows (seller shop: seller, rating, from, often shipping) go to the header
   const common = {};
   if (kept.length > 1) {
-    for (const k of ['seller', 'rating', 'from', 'shipping', 'media', 'sleeve']) {
+    for (const k of ['seller', 'rating', 'from', 'free_over', 'shipping', 'media', 'sleeve']) {
       const v = kept[0][k];
       if (v && kept.every(r => r[k] === v)) { common[k] = v; kept.forEach(r => delete r[k]); }
     }
   }
   kept.forEach(r => Object.keys(r).forEach(k => r[k] === '' && delete r[k]));
+  if (fields) kept = kept.map(r => Object.fromEntries(Object.entries(r).filter(([k]) => k === 'id' || fields.includes(k))));
+  const filters = Object.fromEntries(Object.entries({
+    max_price: isFinite(maxPrice) ? maxPrice : null, max_total: isFinite(maxTotal) ? maxTotal : null,
+    min_media: minMedia, min_sleeve: minSleeve, sort: sortBy,
+  }).filter(([, v]) => v != null));
   return {
     common,
     url: here.href.replace(/&page=\d+/, ''),
     total_on_site: total,
     fetched: all.length,
     shown: kept.length,
-    max_price: isFinite(maxPrice) ? maxPrice : null,
+    filters,
     items: kept,
   };
 }

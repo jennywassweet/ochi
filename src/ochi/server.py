@@ -27,7 +27,9 @@ async def fetch(url: str, max_chars: int = 40000) -> str:
     A site-specific extractor (if one matches the URL) returns clean structured data;
     otherwise a generic extractor returns the readable text of the page.
     Use for sites that block normal fetching (Discogs marketplace, Reddit, news).
-    Discogs marketplace URLs accept ochi_max=<price> to keep only cheaper items.
+    Discogs marketplace URLs (seller shops, /shop/list, sellers of a release) accept extra params:
+    ochi_max=<price>, ochi_max_total=<price+shipping>, ochi_min_media / ochi_min_sleeve=<M|NM|VG+|VG|G+|G>,
+    ochi_sort=price|total, ochi_fields=<comma list>, ochi_pages=<n>; combine them with the site's own filters.
     """
     urlguard.check(url)
     ex = extractors.find(url)

@@ -77,6 +77,15 @@ Environment variables override the file: `OCHI_CONFIG` (path to the toml), `OCHI
 `OCHI_PROFILE`, `OCHI_PORT`, `OCHI_EXTRACTORS` (your extractors folder). `[urls]` controls which
 sites ochi may open (see Security). ochi reads `ochi.toml` once at start: restart it after editing.
 
+## Built-in extractors
+
+| extractor | pages | returns |
+|---|---|---|
+| `discogs-market` | seller shops, `/shop/list`, sellers of a release | listings one per line; filters below |
+| `discogs-release` | `/release/…` | have/want, rating, last sold, low / median / high price paid |
+| `reddit-sub`, `reddit-thread` | subreddit feeds, threads | posts with score and comments; comment tree |
+| `generic` | anything else | title and readable text |
+
 ## Writing an extractor
 
 ```js

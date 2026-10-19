@@ -261,3 +261,25 @@ def test_generic_listing_stays_page_mode(site):
 def test_generic_mode_can_be_forced(site, html, param, mode):
     site.routes.append(("example.test", HTML, html))
     assert run(site, f"https://example.test/x?ochi_mode={param}").splitlines()[2].startswith(mode)
+
+
+def test_discogs_release_stats(site):
+    site.routes.append(("discogs.com/release/", HTML, (FIXTURES / "discogs-release.html").read_text(encoding="utf-8")))
+    r = run(site, "https://www.discogs.com/release/13844130-Possessed-Revelations-Of-Oblivion?ref=x")
+    assert r == {
+        "id": 13844130,
+        "title": "Possessed – Revelations Of Oblivion",
+        "url": "https://www.discogs.com/release/13844130-Possessed-Revelations-Of-Oblivion",
+        "stats": {"have": 110, "want": 66, "avg_rating": "4 / 5", "ratings": 16, "last_sold": "2026-10-10",
+                  "low": "€10.00", "median": "€31.00", "high": "€50.00"},
+        "sellers_url": "https://www.discogs.com/sell/release/13844130",
+        "sales_history_url": "https://www.discogs.com/sell/history/13844130",
+    }
+
+
+def test_discogs_release_never_sold(site):
+    site.routes.append(("discogs.com/release/", HTML, """<html><body><h1>A – B</h1><section id="release-stats"><ul>
+        <li><span>Have:</span><a href="#">1,204</a></li><li><span>Last Sold:</span><span>Never</span></li>
+        </ul></section></body></html>"""))
+    r = run(site, "https://www.discogs.com/release/7")
+    assert r["stats"] == {"have": 1204, "last_sold": "Never"}

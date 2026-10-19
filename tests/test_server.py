@@ -10,7 +10,7 @@ pytestmark = pytest.mark.anyio
 
 TOOLS = {"fetch", "look", "show", "tabs", "browser_start", "browser_status", "list_extractors", "snapshot",
          "discogs_search", "discogs_release", "discogs_master_versions", "discogs_listing",
-         "discogs_shipping"}
+         "discogs_shipping", "discogs_wantlist", "discogs_collection"}
 
 
 async def call(name, **args):

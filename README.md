@@ -63,6 +63,7 @@ No Docker, no global Node: Python and dependencies are handled by `uv`. Works on
 | `browser_start()` / `browser_status()` | start / check the ochi Chrome |
 | `discogs_search`, `discogs_release`, `discogs_master_versions`, `discogs_listing` | the bits of the Discogs API we use (structured, no browser) |
 | `discogs_shipping(seller, country)` | a seller's shipping terms to a country: methods, days, rates per item count or weight, minimum order, free-shipping threshold (needs `DISCOGS_TOKEN`; uses the same undocumented endpoint as the site's "shipping" button, read-only) |
+| `discogs_wantlist(username?, query?)`, `discogs_collection(username?, query?)` | a wantlist / collection, one release per line (default: the token owner's); `query` keeps matching lines, e.g. `psychedelic` |
 
 ## Configuration
 
@@ -76,6 +77,15 @@ ochi's home folder (see Setup; `OCHI_HOME` moves it) holds:
 Environment variables override the file: `OCHI_CONFIG` (path to the toml), `OCHI_CHROME`,
 `OCHI_PROFILE`, `OCHI_PORT`, `OCHI_EXTRACTORS` (your extractors folder). `[urls]` controls which
 sites ochi may open (see Security). ochi reads `ochi.toml` once at start: restart it after editing.
+
+## Built-in extractors
+
+| extractor | pages | returns |
+|---|---|---|
+| `discogs-market` | seller shops, `/shop/list`, sellers of a release | listings one per line; filters below |
+| `discogs-release` | `/release/…` | have/want, rating, last sold, low / median / high price paid |
+| `reddit-sub`, `reddit-thread` | subreddit feeds, threads | posts with score and comments; comment tree |
+| `generic` | anything else | the article (news, blogs, wikis) or the page's main text, see below |
 
 ## The generic extractor
 

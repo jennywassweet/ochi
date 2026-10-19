@@ -9,7 +9,7 @@ import urllib.parse
 import urllib.request
 
 API = "https://api.discogs.com"
-UA = "ochi/0.2 +https://github.com/jennywassweet/ochi"
+UA = "ochi/0.3 +https://github.com/jennywassweet/ochi"
 
 
 RETRIES = 3  # on 429 (rate limit: 60 requests/min with a token, 25 without)
@@ -157,3 +157,60 @@ def shipping(seller: str, country: str) -> dict:
             methods.append(row)
     out["methods"] = methods
     return out
+
+
+MAX_PAGES = 20  # 100 items each: wantlists and collections up to 2000 items
+
+
+def _me() -> str:
+    """Username of the DISCOGS_TOKEN owner."""
+    return _get("/oauth/identity")["username"]
+
+
+def _all_pages(path: str, key: str) -> list[dict]:
+    out: list[dict] = []
+    for page in range(1, MAX_PAGES + 1):
+        d = _get(path, per_page=100, page=page)
+        out += d.get(key, [])
+        if page >= d.get("pagination", {}).get("pages", 1):
+            break
+    return out
+
+
+def _release_row(info: dict) -> dict:
+    """The compact form of a release's basic_information (wantlist and collection entries)."""
+    formats = "; ".join(f"{f.get('qty', '1')}×{f.get('name', '')} {', '.join(f.get('descriptions', []))}".strip()
+                        for f in info.get("formats", []))
+    labels = ", ".join(dict.fromkeys(f"{lb.get('name', '')} {lb.get('catno', '')}".strip()
+                                     for lb in info.get("labels", [])))
+    row = {
+        "release_id": info.get("id"),
+        "title": f"{', '.join(a.get('name', '') for a in info.get('artists', []))} – {info.get('title')}",
+        "year": info.get("year"),
+        "format": formats,
+        "label": labels,
+        "styles": ", ".join(info.get("styles") or info.get("genres") or []),
+        "master_id": info.get("master_id"),
+    }
+    return {k: v for k, v in row.items() if v}
+
+
+def _listed(entries: list[dict], query: str, limit: int, extra) -> list[dict]:
+    rows = [_release_row(e.get("basic_information", {})) | extra(e) for e in entries]
+    if q := query.strip().lower():
+        rows = [r for r in rows if q in " ".join(str(v) for v in r.values()).lower()]
+    return rows[:limit]
+
+
+def wantlist(username: str = "", query: str = "", limit: int = 500) -> list[dict]:
+    user = username or _me()
+    entries = _all_pages(f"/users/{urllib.parse.quote(user)}/wants", "wants")
+    return _listed(entries, query, limit, lambda e: {k: v for k, v in {
+        "added": (e.get("date_added") or "")[:10], "notes": e.get("notes")}.items() if v})
+
+
+def collection(username: str = "", query: str = "", limit: int = 500) -> list[dict]:
+    user = username or _me()
+    entries = _all_pages(f"/users/{urllib.parse.quote(user)}/collection/folders/0/releases", "releases")
+    return _listed(entries, query, limit, lambda e: {k: v for k, v in {
+        "added": (e.get("date_added") or "")[:10], "rating": e.get("rating")}.items() if v})

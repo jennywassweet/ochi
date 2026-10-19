@@ -14,7 +14,11 @@ from ochi import extractors
     ("https://old.reddit.com/r/vinyl/comments/abc/", "reddit-thread"),
     ("https://www.reddit.com/r/vinyl/", "reddit-sub"),
     ("https://example.com/article", "generic"),
-    ("https://www.discogs.com/release/123", "generic"),
+    ("https://www.discogs.com/release/123-Artist-Title", "discogs-release"),
+    ("https://www.discogs.com/de/release/123", "discogs-release"),
+    ("https://www.discogs.com/pt_BR/release/123", "discogs-release"),
+    ("https://www.discogs.com/sell/release/123", "discogs-market"),
+    ("https://www.discogs.com/master/123", "generic"),
 ])
 def test_bundled_extractors_routing(url, name):
     assert extractors.find(url).name == name
@@ -22,7 +26,7 @@ def test_bundled_extractors_routing(url, name):
 
 def test_bundled_extractors_have_headers():
     all_ex = extractors.load_all()
-    assert {e.name for e in all_ex} >= {"generic", "discogs-market", "reddit-thread", "reddit-sub"}
+    assert {e.name for e in all_ex} >= {"generic", "discogs-market", "discogs-release", "reddit-thread", "reddit-sub"}
     for e in all_ex:
         assert e.matches, e.name
         assert "async function extract" in e.code, e.name
